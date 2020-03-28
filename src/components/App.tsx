@@ -1,12 +1,13 @@
 import React from "react";
 import "./App.css";
-import Layout from "./Layout";
+import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
-import Sidebar from "./Sidebar";
+import { Sidebar } from "./Sidebar";
 import { Toolbar, ToolbarProps } from "./Toolbar";
-import Stage from "./Stage";
+import { Stage } from "./Stage";
 import { IconNames } from "./Icons/index";
 import { Logo } from "./Logo";
+import { TensorFlowService } from "../services/TensorFlow/index";
 
 interface AppProps {}
 
@@ -67,19 +68,25 @@ const appInitialState = {
     selectedToolbarButtonNames: SidebarButtonNames.PENCIL_BUTTON,
 };
 
-class App extends React.Component<AppProps, AppState> {
+export class App extends React.Component<AppProps, AppState> {
     constructor(props: AppProps) {
         super(props);
         this.state = appInitialState;
     }
 
+    public componentDidMount() {
+        TensorFlowService.tensorFlowHelloWorld();
+    }
+
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
+        // This is a basic selection state, needs actual functionalities defined.
         this.setState({
             selectedSidebarButtonName: p.buttonName,
         });
     };
 
     public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
+        // This is a basic selection state, needs actual functionalities defined.
         this.setState({
             selectedToolbarButtonName: p.buttonName,
         });
@@ -118,5 +125,3 @@ class App extends React.Component<AppProps, AppState> {
         );
     }
 }
-
-export default App;

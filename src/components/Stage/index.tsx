@@ -1,7 +1,5 @@
 import React from "react";
 
-function Stage() {
+export function Stage() {
     return <div>[STAGE]</div>;
 }
-
-export default Stage;

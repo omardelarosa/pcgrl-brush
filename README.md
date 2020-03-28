@@ -55,3 +55,23 @@ function Icon(props: IconProps) {
     }
 }
 ```
+
+## Services
+
+Services are ways to encapsulate our utility classes in a convenient place. Example:
+
+```typescript
+export class MyUtilityService {
+    public someMethodOfTheService() {
+        // ...
+    }
+
+    public static someStaticMethodOfTheService() {
+        // ...
+    }
+}
+```
+
+### TensorFlowService
+
+TensorFlow operations live inside `src/services/TensorFlow` as stateless functions in the `TensorFlowService` class. This allows for separation of concerns and makes them easily usable anywhere else in the code without much boilerplate.

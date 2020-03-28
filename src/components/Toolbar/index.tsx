@@ -15,5 +15,3 @@ export function Toolbar({ buttons }: ToolbarProps) {
         </div>
     );
 }
-
-export default Toolbar;

@@ -1,5 +1,5 @@
 import React from "react";
-import { default as Icon, IconNames } from "../Icons";
+import { IconWrapper, IconNames } from "../Icons";
 import "./styles.css";
 
 export enum SidebarButtonNames {
@@ -26,7 +26,7 @@ export function Button(props: ButtonProps) {
                 props.className ? " " + props.className : ""
             }`}
         >
-            <Icon iconName={iconName} />
+            <IconWrapper iconName={iconName} />
         </button>
     );
 }

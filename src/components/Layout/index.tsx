@@ -1,8 +1,5 @@
 import React from "react";
 import "./styles.css";
-import Sidebar from "../Sidebar";
-import Toolbar from "../Toolbar";
-import Stage from "../Stage";
 
 interface LayoutComponent {
     logo?: JSX.Element;
@@ -11,7 +8,7 @@ interface LayoutComponent {
     stage?: JSX.Element;
 }
 
-function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
+export function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
     return (
         <div className="layout-container">
             <div className="heading-container">
@@ -25,5 +22,3 @@ function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
         </div>
     );
 }
-
-export default Layout;

@@ -23,7 +23,7 @@ interface IconProps {
     iconName: IconNames;
 }
 
-function Icon(props: IconProps) {
+export function IconWrapper(props: IconProps) {
     const iconProps = {
         height: ICON_HEIGHT,
         width: ICON_WIDTH,
@@ -44,5 +44,3 @@ function Icon(props: IconProps) {
             return <div>{`UNSUPPORTED ICON: ${props.iconName}`}</div>;
     }
 }
-
-export default Icon;
