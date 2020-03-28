@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import { Toolbar, ToolbarProps } from "./Toolbar";
 import Stage from "./Stage";
 import { IconNames } from "./Icons/index";
+import { Logo } from "./Logo";
 
 interface AppProps {}
 
@@ -88,6 +89,7 @@ class App extends React.Component<AppProps, AppState> {
         return (
             <div className="App">
                 <Layout
+                    logo={<Logo />}
                     sidebar={
                         <Sidebar
                             buttons={this.state.sidebarButtons.map(b => ({

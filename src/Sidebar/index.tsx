@@ -8,7 +8,7 @@ export interface SidebarProps {
 
 function Sidebar({ buttons }: SidebarProps) {
     return (
-        <div className="sidebar">
+        <div className="sidebar rounder-container">
             {buttons.map((props: ButtonProps) => (
                 <Button {...props} />
             ))}
