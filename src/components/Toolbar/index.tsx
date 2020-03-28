@@ -8,7 +8,7 @@ export interface ToolbarProps {
 
 export function Toolbar({ buttons }: ToolbarProps) {
     return (
-        <div className="toolbar rounder-container">
+        <div className="toolbar rounded-container">
             {buttons.map((props: ButtonProps) => (
                 <Button {...props} />
             ))}

@@ -3,11 +3,11 @@ import "./App.css";
 import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
 import { Sidebar } from "./Sidebar";
-import { Toolbar, ToolbarProps } from "./Toolbar";
+import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
-import { IconNames } from "./Icons/index";
 import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
+import { AppStateService } from "../services/State";
 
 interface AppProps {}
 
@@ -19,59 +19,13 @@ interface AppState {
     toolbarButtons: ButtonProps[];
     selectedSidebarButtonName?: SidebarButtonNames;
     selectedToolbarButtonName?: ToolbarButtonNames;
+    grid: number[][]; // A matrix representation of the tile grid.
 }
-
-const appInitialState = {
-    sidebarButtons: [
-        {
-            buttonName: SidebarButtonNames.PENCIL_BUTTON,
-            iconName: IconNames.PENCIL,
-            className: "sidebar",
-        },
-        {
-            buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-            iconName: IconNames.EYE_DROPPER,
-            className: "sidebar",
-        },
-        {
-            buttonName: SidebarButtonNames.DROPLET_BUTTON,
-            iconName: IconNames.DROPLET,
-            className: "sidebar",
-        },
-        {
-            buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
-            iconName: IconNames.PAINT_FORMAT,
-            className: "sidebar",
-        },
-        // Add additional buttons here and they will appear in the UI...
-    ],
-    toolbarButtons: [
-        {
-            buttonName: SidebarButtonNames.PENCIL_BUTTON,
-            iconName: IconNames.PENCIL,
-        },
-        {
-            buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-            iconName: IconNames.EYE_DROPPER,
-        },
-        {
-            buttonName: SidebarButtonNames.DROPLET_BUTTON,
-            iconName: IconNames.DROPLET,
-        },
-        {
-            buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
-            iconName: IconNames.PAINT_FORMAT,
-        },
-        // Add additional buttons here and they will appear in the UI...
-    ],
-    selectedSidebarButtonName: SidebarButtonNames.PENCIL_BUTTON, // Pencil is selected by default
-    selectedToolbarButtonNames: SidebarButtonNames.PENCIL_BUTTON,
-};
 
 export class App extends React.Component<AppProps, AppState> {
     constructor(props: AppProps) {
         super(props);
-        this.state = appInitialState;
+        this.state = AppStateService.createAppInitialState();
     }
 
     public componentDidMount() {
@@ -90,6 +44,10 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             selectedToolbarButtonName: p.buttonName,
         });
+    };
+
+    public onGridCellClick = (row: number, col: number, data: number) => {
+        console.log("clicked: ", row, col, data);
     };
 
     public render() {
@@ -119,7 +77,12 @@ export class App extends React.Component<AppProps, AppState> {
                             }))}
                         />
                     }
-                    stage={<Stage />}
+                    stage={
+                        <Stage
+                            matrix={this.state.grid}
+                            onCellClick={this.onGridCellClick}
+                        />
+                    }
                 />
             </div>
         );
