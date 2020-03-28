@@ -6,27 +6,27 @@
 }
 
 .toolbar-container {
-    height: 10vh;
-    display: block;
+    height: 12vh;
+    display: flex;
     /* background-color: green; */
 }
 
 .central-container {
-    height: 90vh;
-    display: block;
+    height: 88vh;
+    display: flex;
     /* background-color: blue; */
 }
 
 .sidebar-container {
-    width: 20%;
+    width: 10%;
     height: 100%;
-    display: inline-block;
+    display: flex;
     /* background-color: purple; */
 }
 
 .stage-container {
-    width: 80%;
+    width: 90%;
     height: 100%;
-    display: inline-block;
+    display: flex;
     /* background-color: yellow; */
 }
