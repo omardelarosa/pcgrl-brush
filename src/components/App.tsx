@@ -7,21 +7,11 @@ import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
-import { AppStateService } from "../services/AppState";
+import { AppStateService, AppState } from "../services/AppState";
 
 interface AppProps {}
 
 // Temporarily aliasing this type until distinct button types are made
-type ToolbarButtonNames = SidebarButtonNames;
-
-interface AppState {
-    sidebarButtons: ButtonProps[];
-    toolbarButtons: ButtonProps[];
-    selectedSidebarButtonName?: SidebarButtonNames;
-    selectedToolbarButtonName?: ToolbarButtonNames;
-    grid: number[][]; // A matrix representation of the tile grid.
-    gridSize: number[];
-}
 
 export class App extends React.Component<AppProps, AppState> {
     constructor(props: AppProps) {
@@ -47,12 +37,30 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public onGridCellClick = (row: number, col: number, data: number) => {
-        // console.log("clicked: ", row, col, data);
-        // const size = this.state.gridSize;
+    public onGridClick = () => {
+        this.setState({
+            isClicking: true,
+        });
+    };
 
+    public onGridUnClick = () => {
+        this.setState({
+            isClicking: false,
+        });
+    };
+
+    public onCellMouseOver = (row: number, col: number, data: number) => {
+        if (this.state.isClicking) {
+            const nextGrid = this.state.grid;
+            nextGrid[row][col] = 1;
+            this.setState({
+                grid: nextGrid,
+            });
+        }
+    };
+
+    public onCellClick = (row: number, col: number, data: number) => {
         const nextGrid = this.state.grid;
-        // console.log("size: ", size);
         nextGrid[row][col] = 1;
         this.setState({
             grid: nextGrid,
@@ -89,7 +97,10 @@ export class App extends React.Component<AppProps, AppState> {
                     stage={
                         <Stage
                             matrix={this.state.grid}
-                            onCellClick={this.onGridCellClick}
+                            onGridClick={this.onGridClick}
+                            onGridUnClick={this.onGridUnClick}
+                            onCellMouseOver={this.onCellMouseOver}
+                            onCellClick={this.onCellClick}
                         />
                     }
                 />

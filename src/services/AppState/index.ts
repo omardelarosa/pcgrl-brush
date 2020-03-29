@@ -1,9 +1,21 @@
-import { SidebarButtonNames } from "../../components/Button";
+import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { Numeric } from "../Numeric";
 
 // Number of rows and tiles in stage grid
 const DEFAULT_STAGE_GRID_SIZE = [64, 64];
+
+type ToolbarButtonNames = SidebarButtonNames;
+
+export interface AppState {
+    sidebarButtons: ButtonProps[];
+    toolbarButtons: ButtonProps[];
+    selectedSidebarButtonName?: SidebarButtonNames;
+    selectedToolbarButtonName?: ToolbarButtonNames;
+    grid: number[][]; // A matrix representation of the tile grid.
+    gridSize: number[];
+    isClicking: boolean;
+}
 
 export class AppStateService {
     public static createAppInitialState() {
@@ -57,6 +69,7 @@ export class AppStateService {
                 DEFAULT_STAGE_GRID_SIZE[0],
                 DEFAULT_STAGE_GRID_SIZE[1]
             ),
+            isClicking: false,
         };
     }
 }

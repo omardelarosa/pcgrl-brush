@@ -1,9 +1,16 @@
 import React from "react";
 import "./styles.css";
 
+export type CellHandler = (r: number, c: number, d: number) => void;
+
+export const noop = () => undefined;
+
 interface GridProps {
     matrix: number[][];
-    onCellClick: (r: number, c: number, d: number) => void;
+    onCellClick?: CellHandler;
+    onCellMouseOver?: CellHandler;
+    onGridClick?: CellHandler;
+    onGridUnClick?: CellHandler;
 }
 interface GridState {}
 
@@ -11,18 +18,21 @@ function GridCell({
     row,
     col,
     data,
-    onCellClick,
+    onCellClick = noop,
+    onCellMouseOver = noop,
 }: {
     row: number;
     col: number;
     data: number;
-    onCellClick: (r: number, c: number, d: number) => void;
+    onCellClick?: CellHandler;
+    onCellMouseOver?: CellHandler;
 }) {
     // TODO: add a classname based on the value to make tiling easier
     return (
         <div
             className={`grid-cell${data ? " filled" : ""}`}
             onClick={() => onCellClick(row, col, data)}
+            onMouseOver={() => onCellMouseOver(row, col, data)}
         ></div>
     );
 }
@@ -30,14 +40,16 @@ function GridCell({
 function GridRow({
     items = [],
     rowIndex,
-    onCellClick,
+    onCellClick = noop,
+    onCellMouseOver = noop,
 }: {
     items: number[];
     rowIndex: number;
-    onCellClick: (r: number, c: number, d: number) => void;
+    onCellClick?: CellHandler;
+    onCellMouseOver?: CellHandler;
 }) {
     return (
-        <div className="grid-row">
+        <div className="grid-row noselect">
             {items.map((item, colIdx) => (
                 <GridCell
                     key={`${rowIndex}_${colIdx}`}
@@ -45,6 +57,7 @@ function GridRow({
                     col={colIdx}
                     data={item}
                     onCellClick={onCellClick}
+                    onCellMouseOver={onCellMouseOver}
                 />
             ))}
         </div>
@@ -54,19 +67,33 @@ function GridRow({
 export class Grid extends React.Component<GridProps, GridState> {
     public static defaultProps: GridProps = {
         matrix: [[]],
-        onCellClick: () => undefined,
+        onCellClick: noop,
+        onCellMouseOver: noop,
+        onGridClick: noop,
+        onGridUnClick: noop,
     };
 
     public render() {
+        const {
+            onGridClick = noop,
+            onGridUnClick = noop,
+            onCellClick = noop,
+            onCellMouseOver = noop,
+        } = this.props;
         return (
-            <div className="grid">
+            <div
+                className="grid"
+                onMouseDown={() => onGridClick(-1, -1, -1)}
+                onMouseUp={() => onGridUnClick(-1, -1, -1)}
+            >
                 {/* Iterate over matrix making row elements */}
                 {this.props.matrix.map((rowItems, idx) => (
                     <GridRow
                         items={rowItems}
                         rowIndex={idx}
                         key={`row_${idx}`}
-                        onCellClick={this.props.onCellClick}
+                        onCellClick={onCellClick}
+                        onCellMouseOver={onCellMouseOver}
                     />
                 ))}
             </div>
