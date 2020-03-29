@@ -7,7 +7,7 @@ import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
-import { AppStateService } from "../services/State";
+import { AppStateService } from "../services/AppState";
 
 interface AppProps {}
 
@@ -20,6 +20,7 @@ interface AppState {
     selectedSidebarButtonName?: SidebarButtonNames;
     selectedToolbarButtonName?: ToolbarButtonNames;
     grid: number[][]; // A matrix representation of the tile grid.
+    gridSize: number[];
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -47,7 +48,15 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public onGridCellClick = (row: number, col: number, data: number) => {
-        console.log("clicked: ", row, col, data);
+        // console.log("clicked: ", row, col, data);
+        // const size = this.state.gridSize;
+
+        const nextGrid = this.state.grid;
+        // console.log("size: ", size);
+        nextGrid[row][col] = 1;
+        this.setState({
+            grid: nextGrid,
+        });
     };
 
     public render() {

@@ -1,6 +1,9 @@
 import { SidebarButtonNames } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
-import { TensorFlowService } from "../TensorFlow";
+import { Numeric } from "../Numeric";
+
+// Number of rows and tiles in stage grid
+const DEFAULT_STAGE_GRID_SIZE = [64, 64];
 
 export class AppStateService {
     public static createAppInitialState() {
@@ -49,7 +52,11 @@ export class AppStateService {
             ],
             selectedSidebarButtonName: SidebarButtonNames.PENCIL_BUTTON, // Pencil is selected by default
             selectedToolbarButtonNames: SidebarButtonNames.PENCIL_BUTTON,
-            grid: TensorFlowService.createMatrix(100, 100),
+            gridSize: DEFAULT_STAGE_GRID_SIZE,
+            grid: Numeric.createMatrix(
+                DEFAULT_STAGE_GRID_SIZE[0],
+                DEFAULT_STAGE_GRID_SIZE[1]
+            ),
         };
     }
 }

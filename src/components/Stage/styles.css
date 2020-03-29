@@ -1,15 +1,5 @@
 .stage {
     flex: 1;
     display: flex;
-}
-
-.stage .grid-row {
-    flex: 1;
-    display: flex;
-    height: 10px;
-}
-
-.stage .grid-row .grid-cell {
-    flex: 1;
-    height: 10px;
+    overflow-y: scroll;
 }

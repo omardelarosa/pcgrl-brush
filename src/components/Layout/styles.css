@@ -18,7 +18,7 @@
 }
 
 .toolbar-container {
-    flex: 7;
+    flex: 11;
     display: flex;
 }
 
@@ -35,7 +35,7 @@
 }
 
 .stage-container {
-    flex: 7;
+    flex: 11;
     display: flex;
     /* background-color: yellow; */
 }

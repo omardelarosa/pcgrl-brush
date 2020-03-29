@@ -1,0 +1,44 @@
+.grid {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.grid:first-child {
+    border-top: 1px solid;
+}
+
+.grid-row {
+    flex: 1;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    height: auto;
+}
+
+.grid-row .grid-cell {
+    flex: 1 0;
+    flex-basis: 100%;
+    width: 100%;
+    background-color: #fff;
+    border-left: 1px solid; /* This might be sideways, given the flexbox */
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+}
+
+.grid-cell.filled {
+    background-color: #000;
+}
+
+.grid-cell::before {
+    content: " ";
+    float: left;
+    padding-top: 100%;
+}
+
+.grid-row:first-child {
+    border-left: 1px solid;
+}
