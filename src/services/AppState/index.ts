@@ -46,19 +46,15 @@ export class AppStateService {
             toolbarButtons: [
                 {
                     buttonName: SidebarButtonNames.PENCIL_BUTTON,
-                    iconName: IconNames.PENCIL,
+                    buttonText: "Narrow",
                 },
                 {
                     buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-                    iconName: IconNames.EYE_DROPPER,
+                    buttonText: "Turtle",
                 },
                 {
                     buttonName: SidebarButtonNames.DROPLET_BUTTON,
-                    iconName: IconNames.DROPLET,
-                },
-                {
-                    buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
-                    iconName: IconNames.PAINT_FORMAT,
+                    buttonText: "Wide",
                 },
                 // Add additional buttons here and they will appear in the UI...
             ],

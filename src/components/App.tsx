@@ -47,6 +47,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             isClicking: false,
         });
+        console.log(this.state.grid);
     };
 
     public onCellMouseOver = (row: number, col: number, data: number) => {

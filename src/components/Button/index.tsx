@@ -2,6 +2,8 @@ import React from "react";
 import { IconWrapper, IconNames } from "../Icons";
 import "./styles.css";
 
+const DEFAULT_BUTTON_TEXT = "Untitled Button";
+
 export enum SidebarButtonNames {
     PENCIL_BUTTON = "PENCIL_BUTTON",
     EYE_DROPPER_BUTTON = "EYE_DROPPER_BUTTON",
@@ -11,14 +13,20 @@ export enum SidebarButtonNames {
 
 export interface ButtonProps {
     onClick?: (e: React.MouseEvent, p: ButtonProps) => void;
-    iconName: IconNames;
+    iconName?: IconNames;
     selected?: boolean;
     buttonName?: SidebarButtonNames;
+    buttonText?: string;
     className?: string;
 }
 
 export function Button(props: ButtonProps) {
-    const { onClick, iconName, selected = false } = props;
+    const {
+        onClick,
+        iconName,
+        selected = false,
+        buttonText = DEFAULT_BUTTON_TEXT,
+    } = props;
     return (
         <button
             onClick={ev => (onClick ? onClick(ev, props) : null)}
@@ -26,7 +34,11 @@ export function Button(props: ButtonProps) {
                 props.className ? " " + props.className : ""
             }`}
         >
-            <IconWrapper iconName={iconName} />
+            {iconName ? (
+                <IconWrapper iconName={iconName} />
+            ) : (
+                <span className="button__text">{buttonText} </span>
+            )}
         </button>
     );
 }
