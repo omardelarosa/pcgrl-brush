@@ -9,6 +9,7 @@ interface GridProps {
     matrix: number[][];
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
+    onCellMouseDown?: CellHandler;
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
 }
@@ -20,12 +21,14 @@ function GridCell({
     data,
     onCellClick = noop,
     onCellMouseOver = noop,
+    onCellMouseDown = noop,
 }: {
     row: number;
     col: number;
     data: number;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
+    onCellMouseDown?: CellHandler;
 }) {
     // TODO: add a classname based on the value to make tiling easier
     return (
@@ -33,6 +36,7 @@ function GridCell({
             className={`grid-cell${data ? " filled" : ""}`}
             onClick={() => onCellClick(row, col, data)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
+            onMouseDown={() => onCellMouseDown(row, col, data)}
         ></div>
     );
 }
@@ -42,11 +46,13 @@ function GridRow({
     rowIndex,
     onCellClick = noop,
     onCellMouseOver = noop,
+    onCellMouseDown = noop,
 }: {
     items: number[];
     rowIndex: number;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
+    onCellMouseDown?: CellHandler;
 }) {
     return (
         <div className="grid-row noselect">
@@ -58,6 +64,7 @@ function GridRow({
                     data={item}
                     onCellClick={onCellClick}
                     onCellMouseOver={onCellMouseOver}
+                    onCellMouseDown={onCellMouseDown}
                 />
             ))}
         </div>
@@ -71,6 +78,7 @@ export class Grid extends React.Component<GridProps, GridState> {
         onCellMouseOver: noop,
         onGridClick: noop,
         onGridUnClick: noop,
+        onCellMouseDown: noop,
     };
 
     public render() {
@@ -79,6 +87,7 @@ export class Grid extends React.Component<GridProps, GridState> {
             onGridUnClick = noop,
             onCellClick = noop,
             onCellMouseOver = noop,
+            onCellMouseDown = noop,
         } = this.props;
         return (
             <div
@@ -94,6 +103,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                         key={`row_${idx}`}
                         onCellClick={onCellClick}
                         onCellMouseOver={onCellMouseOver}
+                        onCellMouseDown={onCellMouseDown}
                     />
                 ))}
             </div>

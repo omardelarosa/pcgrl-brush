@@ -9,6 +9,7 @@ interface StageProps {
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
+    onCellMouseDown?: CellHandler;
 }
 
 export function Stage({
@@ -17,6 +18,7 @@ export function Stage({
     onCellMouseOver = noop,
     onGridUnClick = noop,
     onGridClick = noop,
+    onCellMouseDown = noop,
 }: StageProps) {
     return (
         <div className="stage rounded-container">
@@ -24,6 +26,7 @@ export function Stage({
                 matrix={matrix}
                 onCellClick={onCellClick}
                 onCellMouseOver={onCellMouseOver}
+                onCellMouseDown={onCellMouseDown}
                 onGridClick={onGridClick}
                 onGridUnClick={onGridUnClick}
             />
