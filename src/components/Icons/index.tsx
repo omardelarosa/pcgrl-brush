@@ -1,10 +1,11 @@
 import React from "react";
 
 // 1. Add an import declaration here for each icon you wish to componentize, then reference it below
-import { ReactComponent as IconPencil } from "./006-pencil.svg";
-import { ReactComponent as IconEyedropper } from "./011-eyedropper.svg";
-import { ReactComponent as IconDroplet } from "./012-droplet.svg";
-import { ReactComponent as IconPaintFormat } from "./013-paint-format.svg";
+import { ReactComponent as IconPencil } from "../../assets/icons/006-pencil.svg";
+import { ReactComponent as IconEyedropper } from "../../assets/icons/011-eyedropper.svg";
+import { ReactComponent as IconDroplet } from "../../assets/icons/012-droplet.svg";
+import { ReactComponent as IconPaintFormat } from "../../assets/icons/013-paint-format.svg";
+import { ReactComponent as IconBin } from "../../assets/icons/173-bin.svg";
 
 const ICON_HEIGHT = 32;
 const ICON_WIDTH = 32;
@@ -15,6 +16,7 @@ export enum IconNames {
     EYE_DROPPER = "eye-dropper",
     DROPLET = "droplet",
     PAINT_FORMAT = "paint-format",
+    BIN = "bin",
 }
 
 interface IconProps {
@@ -39,6 +41,8 @@ export function IconWrapper(props: IconProps) {
             return <IconDroplet {...iconProps} />;
         case IconNames.PAINT_FORMAT:
             return <IconPaintFormat {...iconProps} />;
+        case IconNames.BIN:
+            return <IconBin {...iconProps} />;
         default:
             // This is basically an unsupported icon
             return <div>{`UNSUPPORTED ICON: ${props.iconName}`}</div>;

@@ -27,10 +27,14 @@
     border-left: 1px solid; /* This might be sideways, given the flexbox */
     border-right: 1px solid;
     border-bottom: 1px solid;
+    /* This is a basic sprite mapping */
+    background-image: url(../../assets/images/tiles.png);
+    background-size: 128px;
+    background-position: 0px;
 }
 
 .grid-cell.filled {
-    background-color: #000;
+    background-position: 64px;
 }
 
 .grid-cell::before {

@@ -7,21 +7,12 @@ import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
-import { AppStateService } from "../services/AppState";
+import { AppStateService, AppState } from "../services/AppState";
+import { Numeric } from "../services/Numeric";
 
 interface AppProps {}
 
 // Temporarily aliasing this type until distinct button types are made
-type ToolbarButtonNames = SidebarButtonNames;
-
-interface AppState {
-    sidebarButtons: ButtonProps[];
-    toolbarButtons: ButtonProps[];
-    selectedSidebarButtonName?: SidebarButtonNames;
-    selectedToolbarButtonName?: ToolbarButtonNames;
-    grid: number[][]; // A matrix representation of the tile grid.
-    gridSize: number[];
-}
 
 export class App extends React.Component<AppProps, AppState> {
     constructor(props: AppProps) {
@@ -34,30 +25,70 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        // This is a basic selection state, needs actual functionalities defined.
+        if (p.buttonName === SidebarButtonNames.TRASH) {
+            this.clearStage();
+        }
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
         });
     };
 
     public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        // This is a basic selection state, needs actual functionalities defined.
         this.setState({
             selectedToolbarButtonName: p.buttonName,
         });
     };
 
-    public onGridCellClick = (row: number, col: number, data: number) => {
-        // console.log("clicked: ", row, col, data);
-        // const size = this.state.gridSize;
+    public onGridClick = () => {
+        this.setState({
+            isClicking: true,
+        });
+    };
 
+    public onGridUnClick = () => {
+        this.setState({
+            isClicking: false,
+        });
+    };
+
+    public onCellMouseOver = (row: number, col: number, data: number) => {
+        if (this.state.isClicking) {
+            this.activateCell(row, col, data);
+        }
+    };
+
+    public onCellClick = (row: number, col: number, data: number) => {
+        this.activateCell(row, col, data);
+    };
+
+    public activateCell(row: number, col: number, data: number): void {
         const nextGrid = this.state.grid;
-        // console.log("size: ", size);
-        nextGrid[row][col] = 1;
+        if (
+            this.state.selectedSidebarButtonName ===
+            SidebarButtonNames.PENCIL_BUTTON
+        ) {
+            nextGrid[row][col] = 1;
+        } else if (
+            this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
+        ) {
+            nextGrid[row][col] = 0;
+        } else {
+            return;
+        }
         this.setState({
             grid: nextGrid,
         });
-    };
+    }
+
+    public clearStage() {
+        const [rows, cols] = this.state.gridSize;
+        const nextGrid = Numeric.createMatrix(rows, cols);
+        console.log("CLEAR STAGE: ", nextGrid);
+        this.setState({
+            grid: nextGrid,
+        });
+    }
 
     public render() {
         return (
@@ -89,7 +120,11 @@ export class App extends React.Component<AppProps, AppState> {
                     stage={
                         <Stage
                             matrix={this.state.grid}
-                            onCellClick={this.onGridCellClick}
+                            onGridClick={this.onGridClick}
+                            onGridUnClick={this.onGridUnClick}
+                            onCellMouseOver={this.onCellMouseOver}
+                            onCellMouseDown={this.onCellClick}
+                            onCellClick={this.onCellClick}
                         />
                     }
                 />

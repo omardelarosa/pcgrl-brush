@@ -1,9 +1,21 @@
-import { SidebarButtonNames } from "../../components/Button";
+import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { Numeric } from "../Numeric";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE = [64, 64];
+const DEFAULT_STAGE_GRID_SIZE = [32, 32];
+
+type ToolbarButtonNames = SidebarButtonNames;
+
+export interface AppState {
+    sidebarButtons: ButtonProps[];
+    toolbarButtons: ButtonProps[];
+    selectedSidebarButtonName?: SidebarButtonNames;
+    selectedToolbarButtonName?: ToolbarButtonNames;
+    grid: number[][]; // A matrix representation of the tile grid.
+    gridSize: number[];
+    isClicking: boolean;
+}
 
 export class AppStateService {
     public static createAppInitialState() {
@@ -15,18 +27,13 @@ export class AppStateService {
                     className: "sidebar",
                 },
                 {
-                    buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-                    iconName: IconNames.EYE_DROPPER,
-                    className: "sidebar",
-                },
-                {
-                    buttonName: SidebarButtonNames.DROPLET_BUTTON,
-                    iconName: IconNames.DROPLET,
-                    className: "sidebar",
-                },
-                {
-                    buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
+                    buttonName: SidebarButtonNames.ERASE,
                     iconName: IconNames.PAINT_FORMAT,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.TRASH,
+                    iconName: IconNames.BIN,
                     className: "sidebar",
                 },
                 // Add additional buttons here and they will appear in the UI...
@@ -34,19 +41,15 @@ export class AppStateService {
             toolbarButtons: [
                 {
                     buttonName: SidebarButtonNames.PENCIL_BUTTON,
-                    iconName: IconNames.PENCIL,
+                    buttonText: "Narrow",
                 },
                 {
                     buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-                    iconName: IconNames.EYE_DROPPER,
+                    buttonText: "Turtle",
                 },
                 {
                     buttonName: SidebarButtonNames.DROPLET_BUTTON,
-                    iconName: IconNames.DROPLET,
-                },
-                {
-                    buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
-                    iconName: IconNames.PAINT_FORMAT,
+                    buttonText: "Wide",
                 },
                 // Add additional buttons here and they will appear in the UI...
             ],
@@ -57,6 +60,7 @@ export class AppStateService {
                 DEFAULT_STAGE_GRID_SIZE[0],
                 DEFAULT_STAGE_GRID_SIZE[1]
             ),
+            isClicking: false,
         };
     }
 }
