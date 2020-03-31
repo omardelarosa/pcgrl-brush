@@ -9,6 +9,8 @@ export enum SidebarButtonNames {
     EYE_DROPPER_BUTTON = "EYE_DROPPER_BUTTON",
     DROPLET_BUTTON = "DROPLET_BUTTON",
     PAINT_FORMAT_BUTTON = "PAINT_FORMAT_BUTTON",
+    TRASH = "TRASH",
+    ERASE = "ERASE",
 }
 
 export interface ButtonProps {

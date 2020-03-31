@@ -8,6 +8,7 @@ import { Stage } from "./Stage";
 import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
 import { AppStateService, AppState } from "../services/AppState";
+import { Numeric } from "../services/Numeric";
 
 interface AppProps {}
 
@@ -24,14 +25,16 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        // This is a basic selection state, needs actual functionalities defined.
+        if (p.buttonName === SidebarButtonNames.TRASH) {
+            this.clearStage();
+        }
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
         });
     };
 
     public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        // This is a basic selection state, needs actual functionalities defined.
         this.setState({
             selectedToolbarButtonName: p.buttonName,
         });
@@ -51,21 +54,41 @@ export class App extends React.Component<AppProps, AppState> {
 
     public onCellMouseOver = (row: number, col: number, data: number) => {
         if (this.state.isClicking) {
-            const nextGrid = this.state.grid;
-            nextGrid[row][col] = 1;
-            this.setState({
-                grid: nextGrid,
-            });
+            this.activateCell(row, col, data);
         }
     };
 
     public onCellClick = (row: number, col: number, data: number) => {
+        this.activateCell(row, col, data);
+    };
+
+    public activateCell(row: number, col: number, data: number): void {
         const nextGrid = this.state.grid;
-        nextGrid[row][col] = 1;
+        if (
+            this.state.selectedSidebarButtonName ===
+            SidebarButtonNames.PENCIL_BUTTON
+        ) {
+            nextGrid[row][col] = 1;
+        } else if (
+            this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
+        ) {
+            nextGrid[row][col] = 0;
+        } else {
+            return;
+        }
         this.setState({
             grid: nextGrid,
         });
-    };
+    }
+
+    public clearStage() {
+        const [rows, cols] = this.state.gridSize;
+        const nextGrid = Numeric.createMatrix(rows, cols);
+        console.log("CLEAR STAGE: ", nextGrid);
+        this.setState({
+            grid: nextGrid,
+        });
+    }
 
     public render() {
         return (

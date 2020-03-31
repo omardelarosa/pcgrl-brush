@@ -27,18 +27,13 @@ export class AppStateService {
                     className: "sidebar",
                 },
                 {
-                    buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-                    iconName: IconNames.EYE_DROPPER,
-                    className: "sidebar",
-                },
-                {
-                    buttonName: SidebarButtonNames.DROPLET_BUTTON,
-                    iconName: IconNames.DROPLET,
-                    className: "sidebar",
-                },
-                {
-                    buttonName: SidebarButtonNames.PAINT_FORMAT_BUTTON,
+                    buttonName: SidebarButtonNames.ERASE,
                     iconName: IconNames.PAINT_FORMAT,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.TRASH,
+                    iconName: IconNames.BIN,
                     className: "sidebar",
                 },
                 // Add additional buttons here and they will appear in the UI...
