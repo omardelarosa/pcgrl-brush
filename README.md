@@ -19,6 +19,27 @@ http://localhost:3000/
 
 This project was bootstrapped using `create-react-app`. You can see the other readme for it at [cra-README.md](/cra-README.md) with more instructions.
 
+## Python Setup
+
+Python files in this repo are all namespaced under the `py/` subdirectory.
+
+1. Clone PCGRL Gym repo to a directory _outside of this repo_:
+
+```bash
+git clone https://github.com/amidos2006/gym-pcgrl
+```
+
+2. `pip` install the gym-pcgrl package:
+
+```
+cd /path/to/gym-pcgrl
+pip install -e .
+```
+
+3. Switch back to `py/` in this repo.
+
+4. Test your environment by running `test-env.py`.
+
 ## Contributing
 
 1. Make a branch from `master` and add your changes:
