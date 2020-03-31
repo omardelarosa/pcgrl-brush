@@ -29,12 +29,12 @@
     border-bottom: 1px solid;
     /* This is a basic sprite mapping */
     background-image: url(../../assets/images/tiles.png);
-    background-size: 54px;
+    background-size: 128px;
     background-position: 0px;
 }
 
 .grid-cell.filled {
-    background-position: 26px;
+    background-position: 64px;
 }
 
 .grid-cell::before {

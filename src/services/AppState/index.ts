@@ -3,7 +3,7 @@ import { IconNames } from "../../components/Icons";
 import { Numeric } from "../Numeric";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE = [64, 64];
+const DEFAULT_STAGE_GRID_SIZE = [32, 32];
 
 type ToolbarButtonNames = SidebarButtonNames;
 
