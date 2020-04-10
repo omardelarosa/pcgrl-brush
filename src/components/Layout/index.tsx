@@ -19,6 +19,10 @@ export function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
                 <div className="sidebar-container">{sidebar}</div>
                 <div className="stage-container">{stage}</div>
             </div>
+            <div className="window-container">
+                [WINDOW]
+                <div>[TILE COMPONENT]</div>
+            </div>
         </div>
     );
 }
