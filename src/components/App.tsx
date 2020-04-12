@@ -9,6 +9,8 @@ import { Logo } from "./Logo";
 import { TensorFlowService } from "../services/TensorFlow/index";
 import { AppStateService, AppState } from "../services/AppState";
 import { Numeric } from "../services/Numeric";
+import { Tileset } from "./Tileset";
+import { TilesetButtonProps } from "./TilesetButton";
 
 interface AppProps {}
 
@@ -37,6 +39,12 @@ export class App extends React.Component<AppProps, AppState> {
     public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
         this.setState({
             selectedToolbarButtonName: p.buttonName,
+        });
+    };
+
+    public onTilesetButtonClick = (ex: React.MouseEvent, p: TilesetButtonProps) => {
+        this.setState({
+            selectedTilesetButtonName: p.buttonName,
         });
     };
 
@@ -125,6 +133,17 @@ export class App extends React.Component<AppProps, AppState> {
                             onCellMouseOver={this.onCellMouseOver}
                             onCellMouseDown={this.onCellClick}
                             onCellClick={this.onCellClick}
+                        />
+                    }
+                    tileset={
+                        <Tileset
+                            buttons={this.state.tilesetButtons.map(b => ({
+                                ...b,
+                                selected:
+                                    b.buttonName ===
+                                    this.state.selectedTilesetButtonName,
+                                onClick: this.onTilesetButtonClick,
+                            }))}
                         />
                     }
                 />

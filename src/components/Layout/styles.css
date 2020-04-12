@@ -39,12 +39,3 @@
     display: flex;
     /* background-color: yellow; */
 }
-
-.window-container {
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    left: 80%;
-    top: 20%;
-    background-color: white;
-}
