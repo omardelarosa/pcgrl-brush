@@ -23,6 +23,7 @@ export function Stage({
     return (
         <div className="stage rounded-container">
             <Grid
+                className="user-canvas"
                 matrix={matrix}
                 onCellClick={onCellClick}
                 onCellMouseOver={onCellMouseOver}
@@ -30,8 +31,8 @@ export function Stage({
                 onGridClick={onGridClick}
                 onGridUnClick={onGridUnClick}
             />
-
             <Grid
+                className="ghost-canvas"
                 matrix={matrix}
                 onCellClick={noop}
                 onCellMouseOver={noop}

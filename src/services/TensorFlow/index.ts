@@ -6,7 +6,7 @@ import { Tensor, Rank } from "@tensorflow/tfjs";
 // Testing basic functionality of tensorflow using code from:
 // https://www.tensorflow.org/js/guide/tensors_operations
 
-type TSModelType = tf.GraphModel | null;
+type TSModelType = tf.GraphModel | tf.LayersModel | null;
 
 const MODEL_HTTP_URL = "/models-tfjs/sokoban/narrow/model_1/model.json";
 
@@ -48,13 +48,9 @@ export class TensorFlowService {
     }
 
     async fetchModel(): Promise<TSModelType> {
-        console.log(
-            "url: ",
-            window.location.href.split("src")[0] + MODEL_HTTP_URL
-        );
-        let model = await tf.loadGraphModel(
-            window.location.href.split("src")[0] + MODEL_HTTP_URL
-        );
+        const url = window.location.href.split("src")[0] + MODEL_HTTP_URL;
+        console.log("url: ", url);
+        let model = await tf.loadGraphModel(MODEL_HTTP_URL);
         console.log("Loaded model: ", model);
         return model;
     }
@@ -97,7 +93,7 @@ export class TensorFlowService {
         return stateExpanded;
     }
 
-    public async predictAndDraw(stateAsTensor: Tensor<Rank.R4>) {
+    public async predictAndDraw(stateAsTensor: Tensor<Rank>) {
         let model = this.model;
         if (!model) {
             console.log("Model unavailable! Fetching...");

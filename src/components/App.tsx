@@ -11,6 +11,7 @@ import { AppStateService, AppState } from "../services/AppState";
 import { Numeric } from "../services/Numeric";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
+import { Tensor, Rank } from "@tensorflow/tfjs";
 
 interface AppProps {}
 
@@ -42,7 +43,10 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public onTilesetButtonClick = (ex: React.MouseEvent, p: TilesetButtonProps) => {
+    public onTilesetButtonClick = (
+        ex: React.MouseEvent,
+        p: TilesetButtonProps
+    ) => {
         this.setState({
             selectedTilesetButtonName: p.buttonName,
         });
@@ -130,10 +134,18 @@ export class App extends React.Component<AppProps, AppState> {
         nextGrid: number[][],
         nextSize: [number, number]
     ) {
-        const stateAsTensor = this.tfService.transformStateToTensor(
+        // Skip TF updates on 0 grid
+        if (!nextGrid[0] && !nextGrid[1]) {
+            return;
+        }
+        // Convert state to Tensor
+        const stateAsTensor: Tensor<Rank> = this.tfService.transformStateToTensor(
             nextGrid,
             nextSize
         );
+
+        // TODO: let this update the model on the right
+        this.tfService.predictAndDraw(stateAsTensor);
     }
 
     public render() {
@@ -177,7 +189,7 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     tileset={
                         <Tileset
-                            buttons={this.state.tilesetButtons.map(b => ({
+                            buttons={this.state.tilesetButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
