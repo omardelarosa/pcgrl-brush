@@ -1,0 +1,24 @@
+.tileset-button-container {
+    justify-content: center;
+    display: flex;
+    border: none;
+    padding: 0.5rem 1rem;
+    margin: 0.2rem;
+}
+
+.tileset-button {
+    flex: 0.7;
+    border: 2px solid #B5B5B5;
+    background-color: transparent;
+    margin: 0 0.5rem;
+    border-radius: 16px;
+    transition-duration: 0.4s;
+}
+
+.tileset-button:hover {
+    background-color: #B5B5B5;
+}
+
+.tileset-button.selected {
+    background-color: #B5B5B5
+}

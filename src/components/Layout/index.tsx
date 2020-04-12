@@ -6,9 +6,10 @@ interface LayoutComponent {
     toolbar?: JSX.Element;
     sidebar?: JSX.Element;
     stage?: JSX.Element;
+    tileset?: JSX.Element;
 }
 
-export function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
+export function Layout({ sidebar, toolbar, stage, logo, tileset }: LayoutComponent) {
     return (
         <div className="layout-container">
             <div className="heading-container">
@@ -19,6 +20,7 @@ export function Layout({ sidebar, toolbar, stage, logo }: LayoutComponent) {
                 <div className="sidebar-container">{sidebar}</div>
                 <div className="stage-container">{stage}</div>
             </div>
+            <div>{tileset}</div>
         </div>
     );
 }
