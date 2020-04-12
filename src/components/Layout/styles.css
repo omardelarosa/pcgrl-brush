@@ -35,7 +35,15 @@
 }
 
 .stage-container {
-    flex: 11;
+    flex: 8;
     display: flex;
     /* background-color: yellow; */
+}
+
+.tileset-container {
+    flex: 2;
+    /* padding-right: 0.5em; */
+    padding: 0.5rem 0.5rem 0 0;
+    height: 100%;
+    padding-bottom: 0px;
 }
