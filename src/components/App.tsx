@@ -17,14 +17,14 @@ interface AppProps {}
 // Temporarily aliasing this type until distinct button types are made
 
 export class App extends React.Component<AppProps, AppState> {
+    private tfService: TensorFlowService;
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
+        this.tfService = new TensorFlowService();
     }
 
-    public componentDidMount() {
-        TensorFlowService.tensorFlowHelloWorld();
-    }
+    public componentDidMount() {}
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
         if (p.buttonName === SidebarButtonNames.TRASH) {
@@ -87,6 +87,8 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             grid: nextGrid,
         });
+
+        this.updateGhostLayer(nextGrid, this.state.gridSize);
     }
 
     public clearStage() {
@@ -95,6 +97,8 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             grid: nextGrid,
         });
+
+        this.updateGhostLayer(nextGrid, [rows, cols]);
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
@@ -118,7 +122,19 @@ export class App extends React.Component<AppProps, AppState> {
             gridSize: newSize,
             grid: nextGrid,
         });
+
+        this.updateGhostLayer(nextGrid, newSize);
     };
+
+    public async updateGhostLayer(
+        nextGrid: number[][],
+        nextSize: [number, number]
+    ) {
+        const stateAsTensor = this.tfService.transformStateToTensor(
+            nextGrid,
+            nextSize
+        );
+    }
 
     public render() {
         return (
