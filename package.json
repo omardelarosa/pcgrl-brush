@@ -3,6 +3,7 @@
     "version": "0.0.3",
     "private": true,
     "dependencies": {
+        "@aas395/numjs": "^0.16.3",
         "@tensorflow/tfjs": "^1.7.1",
         "@testing-library/jest-dom": "^4.2.4",
         "@testing-library/react": "^9.3.2",
@@ -15,6 +16,9 @@
         "react-dom": "^16.13.1",
         "react-scripts": "3.4.1",
         "typescript": "~3.7.2"
+    },
+    "engines": {
+        "node": ">=12.16.1 <0.13"
     },
     "scripts": {
         "start": "react-scripts start",
