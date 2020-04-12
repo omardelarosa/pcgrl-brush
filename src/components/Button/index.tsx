@@ -31,7 +31,7 @@ export function Button(props: ButtonProps) {
     } = props;
     return (
         <button
-            onClick={ev => (onClick ? onClick(ev, props) : null)}
+            onClick={(ev) => (onClick ? onClick(ev, props) : null)}
             className={`button${selected ? " selected" : ""}${
                 props.className ? " " + props.className : ""
             }`}

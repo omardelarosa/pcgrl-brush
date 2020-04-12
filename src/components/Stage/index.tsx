@@ -30,6 +30,15 @@ export function Stage({
                 onGridClick={onGridClick}
                 onGridUnClick={onGridUnClick}
             />
+
+            <Grid
+                matrix={matrix}
+                onCellClick={noop}
+                onCellMouseOver={noop}
+                onCellMouseDown={noop}
+                onGridClick={noop}
+                onGridUnClick={noop}
+            />
         </div>
     );
 }

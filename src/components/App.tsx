@@ -71,7 +71,7 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public activateCell(row: number, col: number, data: number): void {
-        const nextGrid = this.state.grid;
+        const nextGrid = Numeric.cloneMatrix(this.state.grid);
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
@@ -92,11 +92,33 @@ export class App extends React.Component<AppProps, AppState> {
     public clearStage() {
         const [rows, cols] = this.state.gridSize;
         const nextGrid = Numeric.createMatrix(rows, cols);
-        console.log("CLEAR STAGE: ", nextGrid);
         this.setState({
             grid: nextGrid,
         });
     }
+
+    public onUpdateGridSize = (newSize: [number, number]) => {
+        const [rows, cols] = newSize;
+        const [rowsOld, colsOld] = this.state.gridSize;
+        const nextGrid = Numeric.createMatrix(rows, cols);
+        const lastGrid = this.state.grid;
+        // Transfer what is possible from old grid.
+        for (let r = 0; r < rowsOld; r++) {
+            for (let c = 0; c < colsOld; c++) {
+                if (r <= rowsOld) {
+                    const row = nextGrid[r];
+                    if (row && c <= row.length) {
+                        row[c] = lastGrid[r][c];
+                    }
+                }
+            }
+        }
+
+        this.setState({
+            gridSize: newSize,
+            grid: nextGrid,
+        });
+    };
 
     public render() {
         return (
@@ -105,7 +127,7 @@ export class App extends React.Component<AppProps, AppState> {
                     logo={<Logo />}
                     sidebar={
                         <Sidebar
-                            buttons={this.state.sidebarButtons.map(b => ({
+                            buttons={this.state.sidebarButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
@@ -116,13 +138,15 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     toolbar={
                         <Toolbar
-                            buttons={this.state.toolbarButtons.map(b => ({
+                            buttons={this.state.toolbarButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
                                     this.state.selectedToolbarButtonName,
                                 onClick: this.onToolbarButtonClick,
                             }))}
+                            gridSize={this.state.gridSize}
+                            onUpdateGridSize={this.onUpdateGridSize}
                         />
                     }
                     stage={

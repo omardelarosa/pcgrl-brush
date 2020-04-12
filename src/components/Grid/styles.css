@@ -1,18 +1,26 @@
 .grid {
-    flex: 1;
+    /* flex: 1; */
     display: flex;
     align-items: center;
+    justify-content: center;
+    /* margin-left: auto;
+    margin-right: auto; */
 }
 
-.grid:first-child {
+.grid-cell:first-child {
     border-top: 1px solid;
+}
+
+.grid-row:first-child {
+    border-left: 1px solid;
 }
 
 .grid-row {
     flex: 1;
     display: flex;
-    justify-content: space-around;
-    align-items: center;
+    /* justify-content: space-around; */
+    /* align-items: center; */
+    justify-content: start;
     flex-direction: column;
     margin: 0;
     padding: 0;
@@ -22,9 +30,10 @@
 .grid-row .grid-cell {
     flex: 1 0;
     flex-basis: 100%;
-    width: 100%;
+    width: 32px;
+    height: 32px;
     background-color: #fff;
-    border-left: 1px solid; /* This might be sideways, given the flexbox */
+    /* border-left: 1px solid; This might be sideways, given the flexbox */
     border-right: 1px solid;
     border-bottom: 1px solid;
     /* This is a basic sprite mapping */
@@ -43,6 +52,6 @@
     padding-top: 100%;
 }
 
-.grid-row:first-child {
+/* .grid-row:first-child {
     border-left: 1px solid;
-}
+} */

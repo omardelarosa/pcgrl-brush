@@ -9,7 +9,7 @@ import GoalIcon from "../../assets/images/environment_02.png";
 import GroundIcon from "../../assets/images/ground_06.png";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE = [32, 32];
+const DEFAULT_STAGE_GRID_SIZE: [number, number] = [10, 10];
 
 type ToolbarButtonNames = SidebarButtonNames;
 
@@ -21,7 +21,7 @@ export interface AppState {
     selectedToolbarButtonName?: ToolbarButtonNames;
     selectedTilesetButtonName?: TilesetButtonNames;
     grid: number[][]; // A matrix representation of the tile grid.
-    gridSize: number[];
+    gridSize: [number, number];
     isClicking: boolean;
 }
 
