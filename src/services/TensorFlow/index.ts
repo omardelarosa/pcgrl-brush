@@ -133,7 +133,7 @@ async function predictAndDraw(model: tf.GraphModel) {
     // prepare state input
     let a = tf.tensor4d(state, [1, 10, 10, 5], "float32");
     // calls predict on the model
-    let preResp = model.predict(a);
+    let preResp = model.predict(a);//.array();
     console.log(preResp);
     // let actionIndex = preResp[0].indexOf(Math.max(...preResp[0]))
     /*
