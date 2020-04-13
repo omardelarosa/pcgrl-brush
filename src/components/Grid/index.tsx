@@ -12,6 +12,7 @@ interface GridProps {
     onCellMouseDown?: CellHandler;
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
+    className?: string;
 }
 interface GridState {}
 
@@ -91,7 +92,7 @@ export class Grid extends React.Component<GridProps, GridState> {
         } = this.props;
         return (
             <div
-                className="grid"
+                className={"grid " + this.props.className}
                 onMouseDown={() => onGridClick(-1, -1, -1)}
                 onMouseUp={() => onGridUnClick(-1, -1, -1)}
             >

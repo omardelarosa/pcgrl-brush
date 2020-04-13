@@ -3,18 +3,23 @@
     "version": "0.0.3",
     "private": true,
     "dependencies": {
+        "@aas395/numjs": "^0.16.3",
         "@tensorflow/tfjs": "^1.7.1",
         "@testing-library/jest-dom": "^4.2.4",
         "@testing-library/react": "^9.3.2",
         "@testing-library/user-event": "^7.1.2",
         "@types/jest": "^24.0.0",
         "@types/node": "^12.0.0",
+        "@types/numjs": "^0.14.4",
         "@types/react": "^16.9.0",
         "@types/react-dom": "^16.9.0",
         "react": "^16.13.1",
         "react-dom": "^16.13.1",
         "react-scripts": "3.4.1",
         "typescript": "~3.7.2"
+    },
+    "engines": {
+        "node": ">=12.1 <13.0"
     },
     "scripts": {
         "start": "react-scripts start",

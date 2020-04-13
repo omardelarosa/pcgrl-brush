@@ -1,17 +1,17 @@
+import * as nj from "@aas395/numjs";
+
 export class Numeric {
     public static createMatrix(
         numRows: number,
         numCols: number,
         defaultValue = 0
-    ) {
-        const rows = [];
-        for (let i = 0; i < numRows; i++) {
-            const row = [];
-            for (let j = 0; j < numCols; j++) {
-                row.push(defaultValue);
-            }
-            rows.push(row);
-        }
-        return rows;
+    ): number[][] {
+        const m = nj.zeros([numRows, numCols]);
+        return m.tolist();
+    }
+
+    public static cloneMatrix(matrix: Array<Array<number>>) {
+        const m = nj.array(matrix);
+        return m.tolist();
     }
 }

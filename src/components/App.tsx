@@ -11,20 +11,21 @@ import { AppStateService, AppState } from "../services/AppState";
 import { Numeric } from "../services/Numeric";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
+import { Tensor, Rank } from "@tensorflow/tfjs";
 
 interface AppProps {}
 
 // Temporarily aliasing this type until distinct button types are made
 
 export class App extends React.Component<AppProps, AppState> {
+    private tfService: TensorFlowService;
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
+        this.tfService = new TensorFlowService();
     }
 
-    public componentDidMount() {
-        TensorFlowService.tensorFlowHelloWorld();
-    }
+    public componentDidMount() {}
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
         if (p.buttonName === SidebarButtonNames.TRASH) {
@@ -42,7 +43,10 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public onTilesetButtonClick = (ex: React.MouseEvent, p: TilesetButtonProps) => {
+    public onTilesetButtonClick = (
+        ex: React.MouseEvent,
+        p: TilesetButtonProps
+    ) => {
         this.setState({
             selectedTilesetButtonName: p.buttonName,
         });
@@ -71,7 +75,7 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public activateCell(row: number, col: number, data: number): void {
-        const nextGrid = this.state.grid;
+        const nextGrid = Numeric.cloneMatrix(this.state.grid);
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
@@ -87,15 +91,61 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             grid: nextGrid,
         });
+
+        this.updateGhostLayer(nextGrid, this.state.gridSize);
     }
 
     public clearStage() {
         const [rows, cols] = this.state.gridSize;
         const nextGrid = Numeric.createMatrix(rows, cols);
-        console.log("CLEAR STAGE: ", nextGrid);
         this.setState({
             grid: nextGrid,
         });
+
+        this.updateGhostLayer(nextGrid, [rows, cols]);
+    }
+
+    public onUpdateGridSize = (newSize: [number, number]) => {
+        const [rows, cols] = newSize;
+        const [rowsOld, colsOld] = this.state.gridSize;
+        const nextGrid = Numeric.createMatrix(rows, cols);
+        const lastGrid = this.state.grid;
+        // Transfer what is possible from old grid.
+        for (let r = 0; r < rowsOld; r++) {
+            for (let c = 0; c < colsOld; c++) {
+                if (r <= rowsOld) {
+                    const row = nextGrid[r];
+                    if (row && c <= row.length) {
+                        row[c] = lastGrid[r][c];
+                    }
+                }
+            }
+        }
+
+        this.setState({
+            gridSize: newSize,
+            grid: nextGrid,
+        });
+
+        this.updateGhostLayer(nextGrid, newSize);
+    };
+
+    public async updateGhostLayer(
+        nextGrid: number[][],
+        nextSize: [number, number]
+    ) {
+        // Skip TF updates on 0 grid
+        if (!nextGrid[0] && !nextGrid[1]) {
+            return;
+        }
+        // Convert state to Tensor
+        const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
+            nextGrid,
+            nextSize
+        );
+
+        // TODO: let this update the model on the right
+        this.tfService.predictAndDraw(stateAsTensor);
     }
 
     public render() {
@@ -105,7 +155,7 @@ export class App extends React.Component<AppProps, AppState> {
                     logo={<Logo />}
                     sidebar={
                         <Sidebar
-                            buttons={this.state.sidebarButtons.map(b => ({
+                            buttons={this.state.sidebarButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
@@ -116,13 +166,15 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     toolbar={
                         <Toolbar
-                            buttons={this.state.toolbarButtons.map(b => ({
+                            buttons={this.state.toolbarButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
                                     this.state.selectedToolbarButtonName,
                                 onClick: this.onToolbarButtonClick,
                             }))}
+                            gridSize={this.state.gridSize}
+                            onUpdateGridSize={this.onUpdateGridSize}
                         />
                     }
                     stage={
@@ -137,7 +189,7 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     tileset={
                         <Tileset
-                            buttons={this.state.tilesetButtons.map(b => ({
+                            buttons={this.state.tilesetButtons.map((b) => ({
                                 ...b,
                                 selected:
                                     b.buttonName ===
