@@ -139,7 +139,7 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
         // Convert state to Tensor
-        const stateAsTensor: Tensor<Rank> = this.tfService.transformStateToTensor(
+        const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
             nextGrid,
             nextSize
         );

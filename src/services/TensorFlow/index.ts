@@ -58,7 +58,7 @@ export class TensorFlowService {
     public transformStateToTensor(
         gridState: number[][],
         gridSize: [number, number]
-    ): Tensor<Rank> {
+    ): Tensor {
         return TensorFlowService.transformStateToTensor(gridState, gridSize);
     }
 
@@ -73,12 +73,12 @@ export class TensorFlowService {
     public static transformStateToTensor(
         gridState: number[][],
         gridSize: [number, number]
-    ): Tensor<Rank> {
+    ): Tensor {
         const encodingDim = 5; // the dimension of the OneHot encoding
         const stateCopy: number[][] = Numeric.cloneMatrix(gridState);
 
         // Stack onehot encoded rows
-        let stateExpanded: Tensor<Rank> = tf.stack(
+        let stateExpanded: Tensor = tf.stack(
             stateCopy.map((row) => {
                 // OneHot encode each row
                 return tf.oneHot(tf.tensor1d(row, "int32"), encodingDim);
@@ -90,10 +90,10 @@ export class TensorFlowService {
 
         console.log("State Expanded: ", stateExpanded);
 
-        return stateExpanded;
+        return tf.cast(stateExpanded, "float32");
     }
 
-    public async predictAndDraw(stateAsTensor: Tensor<Rank>) {
+    public async predictAndDraw(stateAsTensor: Tensor) {
         let model = this.model;
         if (!model) {
             console.log("Model unavailable! Fetching...");
@@ -104,8 +104,10 @@ export class TensorFlowService {
         // calls predict on the model
 
         if (model) {
-            let preResp = model.predict(stateAsTensor);
-            console.log(preResp);
+            let preResp: any = model.predict(stateAsTensor);
+            console.log("Model Respose", preResp);
+            console.log("Model Respose", preResp.print());
+            // preResp.print();
         } else {
             console.warn("Unable to initialize TensorFlow model.");
         }

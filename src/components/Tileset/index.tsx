@@ -7,14 +7,14 @@ export interface TilesetProps {
 }
 
 export function Tileset(props: TilesetProps) {
-    const {
-        buttons,
-    } = props;
+    const { buttons } = props;
     return (
         <div className="tileset">
-            <div>TILESET<hr></hr></div>
-            {buttons.map((props: TilesetButtonProps) => (
-                <TilesetButton {...props} />
+            <div>
+                TILESET<hr></hr>
+            </div>
+            {buttons.map((props: TilesetButtonProps, idx: number) => (
+                <TilesetButton key={`tileset_${idx}`} {...props} />
             ))}
         </div>
     );
