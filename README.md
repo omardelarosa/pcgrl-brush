@@ -2,7 +2,7 @@
 
 <img src="docs/preview-v0.png" width=640/>
 
-[Netlify Preview](https://vigilant-ramanujan-789868.netlify.com/)
+[https://pcgrl-editor.netlify.com/](https://pcgrl-editor.netlify.com/)
 
 ## Setup
 

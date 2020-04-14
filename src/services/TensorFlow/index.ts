@@ -104,10 +104,13 @@ export class TensorFlowService {
         // calls predict on the model
 
         if (model) {
+            console.log("Input: ");
+            stateAsTensor.print();
             let preResp: any = model.predict(stateAsTensor);
-            console.log("Model Respose", preResp);
-            console.log("Model Respose", preResp.print());
-            // preResp.print();
+            // console.log("Model Respose", preResp);
+            // console.log("Model Respose", preResp.print());
+            console.log("Output: ");
+            tf.cast(preResp, "int32").print();
         } else {
             console.warn("Unable to initialize TensorFlow model.");
         }
