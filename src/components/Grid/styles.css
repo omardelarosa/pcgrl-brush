@@ -7,6 +7,10 @@
     margin-right: auto; */
 }
 
+.grid-wrapper {
+    margin: 24px;
+}
+
 .grid-cell:first-child {
     border-top: 1px solid;
 }
@@ -22,6 +26,7 @@
     /* align-items: center; */
     justify-content: start;
     flex-direction: column;
+    /* flex-wrap: wrap; */
     margin: 0;
     padding: 0;
     height: auto;

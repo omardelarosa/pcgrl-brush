@@ -30,6 +30,7 @@ export function Stage({
                 onCellMouseDown={onCellMouseDown}
                 onGridClick={onGridClick}
                 onGridUnClick={onGridUnClick}
+                gridLabel="user"
             />
             <Grid
                 className="ghost-canvas"
@@ -39,6 +40,27 @@ export function Stage({
                 onCellMouseDown={noop}
                 onGridClick={noop}
                 onGridUnClick={noop}
+                gridLabel="narrow"
+            />
+            <Grid
+                className="ghost-canvas"
+                matrix={matrix}
+                onCellClick={noop}
+                onCellMouseOver={noop}
+                onCellMouseDown={noop}
+                onGridClick={noop}
+                onGridUnClick={noop}
+                gridLabel="turtle"
+            />
+            <Grid
+                className="ghost-canvas"
+                matrix={matrix}
+                onCellClick={noop}
+                onCellMouseOver={noop}
+                onCellMouseDown={noop}
+                onGridClick={noop}
+                onGridUnClick={noop}
+                gridLabel="wide"
             />
         </div>
     );

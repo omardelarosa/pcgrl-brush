@@ -3,6 +3,7 @@
     display: flex;
     overflow-y: scroll;
     justify-content: space-around;
+    flex-wrap: wrap;
 }
 
 .stage .user-canvas {

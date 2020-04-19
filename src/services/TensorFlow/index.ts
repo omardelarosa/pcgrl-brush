@@ -8,25 +8,47 @@ import { Tensor, Rank } from "@tensorflow/tfjs";
 
 type TSModelType = tf.GraphModel | tf.LayersModel | null;
 
-const MODEL_HTTP_URL = "/models-tfjs/sokoban/narrow/model_1/model.json";
+// d['narrow'][1] -> narrow/model_1
 
+interface ModelsDictionary {
+    narrow?: TSModelType;
+    turtle?: TSModelType;
+    wide?: TSModelType;
+}
+
+type ModelName = "narrow" | "turtle" | "wide";
+
+const MODEL_URLS: Record<ModelName, string> = {
+    narrow: "/models-tfjs/sokoban/narrow/model_1/model.json",
+    turtle: "/models-tfjs/sokoban/turtle/model_1/model.json",
+    wide: "/models-tfjs/sokoban/wide/model_1/model.json",
+};
 export class TensorFlowService {
     private model: TSModelType = null;
+
+    // TODO:
+    private models: ModelsDictionary = {
+        narrow: null,
+        turtle: null,
+        wide: null,
+    };
+
     constructor() {
         // Does TF setup stuff
         this.onInit();
     }
 
-    public async onInit(): Promise<TSModelType> {
+    public async onInit(): Promise<ModelsDictionary | null> {
+        // Model loading, setup goes here.
+
         // Fetch model on init
-        return this.fetchModel()
-            .then((fetchedModel) => {
-                // TODO: handle fetch error
-                this.model = fetchedModel;
-                return fetchedModel;
+        return this.fetchModels()
+            .then((fetchedModels: ModelsDictionary) => {
+                this.models = fetchedModels;
+                return fetchedModels;
             })
             .catch((err) => {
-                console.error("Error Fetching Model from: ", MODEL_HTTP_URL);
+                console.error("Error Fetching Model from: ", MODEL_URLS);
                 console.error(err);
                 return null;
             });
@@ -47,12 +69,18 @@ export class TensorFlowService {
         // });
     }
 
-    async fetchModel(): Promise<TSModelType> {
-        const url = window.location.href.split("src")[0] + MODEL_HTTP_URL;
-        console.log("url: ", url);
-        let model = await tf.loadGraphModel(MODEL_HTTP_URL);
-        console.log("Loaded model: ", model);
-        return model;
+    async fetchModels(): Promise<ModelsDictionary> {
+        const fetchedModels: ModelsDictionary = {};
+        for (let key in MODEL_URLS) {
+            const url =
+                window.location.href.split("src")[0] +
+                MODEL_URLS[key as ModelName];
+            console.log("url: ", key, url);
+            let model = await tf.loadGraphModel(url);
+            console.log("Loaded model: ", model);
+            fetchedModels[key as ModelName] = model;
+        }
+        return fetchedModels;
     }
 
     public transformStateToTensor(
@@ -85,35 +113,39 @@ export class TensorFlowService {
             })
         );
 
-        // expand dimensions by 1:
         stateExpanded = stateExpanded.expandDims();
-
-        console.log("State Expanded: ", stateExpanded);
 
         return tf.cast(stateExpanded, "float32");
     }
 
     public async predictAndDraw(stateAsTensor: Tensor) {
-        let model = this.model;
+        let model: TSModelType | undefined | null;
         if (!model) {
             console.log("Model unavailable! Fetching...");
-            model = await this.onInit();
+            let models: ModelsDictionary | null = await this.onInit();
+            if (models) {
+                model = models["wide"]; // model by default for now
+            }
         }
         // prepare state input
         // let a = tf.tensor4d(stateAsTensor, [1, 10, 10, 5], "float32");
         // calls predict on the model
 
-        if (model) {
-            console.log("Input: ");
-            stateAsTensor.print();
-            let preResp: any = model.predict(stateAsTensor);
-            // console.log("Model Respose", preResp);
-            // console.log("Model Respose", preResp.print());
-            console.log("Output: ");
-            tf.cast(preResp, "int32").print();
-        } else {
-            console.warn("Unable to initialize TensorFlow model.");
-        }
+        // if (model) {
+        //     console.log("Input: ");
+        //     stateAsTensor.print();
+        //     let preResp: any = model.predict(stateAsTensor);
+        //     // console.log("Model Respose", preResp);
+        //     // console.log("Model Respose", preResp.print());
+        //     console.log("Output: ");
+        //     // const intResult = tf.cast(preResp, "int32");
+        //     const intResult = preResp;
+        //     // intResult.print();
+        //     const arr = await intResult.array();
+        //     console.log(arr);
+        // } else {
+        //     console.warn("Unable to initialize TensorFlow model.");
+        // }
 
         // let actionIndex = preResp[0].indexOf(Math.max(...preResp[0]))
         /*

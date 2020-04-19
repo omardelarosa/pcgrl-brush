@@ -1,7 +1,10 @@
 import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { Numeric } from "../Numeric";
-import { TilesetButtonProps, TilesetButtonNames } from "../../components/TilesetButton";
+import {
+    TilesetButtonProps,
+    TilesetButtonNames,
+} from "../../components/TilesetButton";
 import WallIcon from "../../assets/images/block_08.png";
 import CrateIcon from "../../assets/images/crate_02.png";
 import PlayerIcon from "../../assets/images/player_01.png";
@@ -9,7 +12,7 @@ import GoalIcon from "../../assets/images/environment_02.png";
 import GroundIcon from "../../assets/images/ground_06.png";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE: [number, number] = [10, 10];
+const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
 
 type ToolbarButtonNames = SidebarButtonNames;
 
@@ -65,27 +68,27 @@ export class AppStateService {
                 {
                     text: "Wall",
                     icon: WallIcon,
-                    buttonName: TilesetButtonNames.WALL
+                    buttonName: TilesetButtonNames.WALL,
                 },
                 {
                     text: "Crate",
                     icon: CrateIcon,
-                    buttonName: TilesetButtonNames.CRATE
+                    buttonName: TilesetButtonNames.CRATE,
                 },
                 {
                     text: "Player",
                     icon: PlayerIcon,
-                    buttonName: TilesetButtonNames.PLAYER
+                    buttonName: TilesetButtonNames.PLAYER,
                 },
                 {
                     text: "Goal",
                     icon: GoalIcon,
-                    buttonName: TilesetButtonNames.GOAL
+                    buttonName: TilesetButtonNames.GOAL,
                 },
                 {
                     text: "Ground",
                     icon: GroundIcon,
-                    buttonName: TilesetButtonNames.GROUND
+                    buttonName: TilesetButtonNames.GROUND,
                 },
             ],
             selectedSidebarButtonName: SidebarButtonNames.PENCIL_BUTTON, // Pencil is selected by default
