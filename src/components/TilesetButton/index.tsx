@@ -1,38 +1,36 @@
 import React from "react";
-import "./styles.css"
+import "./styles.css";
+import { TILES } from "../../constants/tiles";
 
 export interface TilesetButtonProps {
-    text?: string,
-    selected?: boolean,
-    className?: string,
-    icon?: string,
-    buttonName?: TilesetButtonNames,
+    text?: string;
+    selected?: boolean;
+    className?: string;
+    icon?: string;
+    buttonValue?: TILES;
     onClick?: (e: React.MouseEvent, p: TilesetButtonProps) => void;
 }
 
-export enum TilesetButtonNames {
-    WALL = "WALL_BUTTON",
-    CRATE = "CRATE_BUTTON",
-    PLAYER = "PLAYER_BUTTON",
-    GOAL = "GOAL_BUTTON",
-    GROUND = "GROUND_BUTTON",
-}
+const ICON_CLASSES: Record<TILES, string> = {
+    [TILES.EMPTY]: "t0",
+    [TILES.SOLID]: "t1",
+    [TILES.PLAYER]: "t2",
+    [TILES.CRATE]: "t3",
+    [TILES.TARGET]: "t4",
+};
 
 export function TilesetButton(props: TilesetButtonProps) {
-    const {
-        text,
-        selected,
-        icon,
-        onClick,
-    } = props;
+    const { text, selected, onClick, buttonValue = TILES.EMPTY } = props;
+    const iconClass = ICON_CLASSES[buttonValue];
     return (
         <div className={"tileset-button-container"}>
-            <img src={icon} alt={text}></img>
+            <div className={`tileset-icon ${iconClass}`}></div>
             <button
-                className={`tileset-button${selected ? " selected": ""}`}
-                onClick={ev => (onClick ? onClick(ev, props) : null)}>
-                    {text}
+                className={`tileset-button${selected ? " selected" : ""}`}
+                onClick={(ev) => (onClick ? onClick(ev, props) : null)}
+            >
+                {text}
             </button>
         </div>
-    )
+    );
 }

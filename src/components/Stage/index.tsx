@@ -2,9 +2,11 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
+import { SuggestedGrids } from "../../services/AppState";
+import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
-    matrix: number[][];
+    grids: SuggestedGrids;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
@@ -13,7 +15,7 @@ interface StageProps {
 }
 
 export function Stage({
-    matrix,
+    grids,
     onCellClick = noop,
     onCellMouseOver = noop,
     onGridUnClick = noop,
@@ -22,24 +24,27 @@ export function Stage({
 }: StageProps) {
     return (
         <div className="stage rounded-container">
-            <Grid
-                className="user-canvas"
-                matrix={matrix}
-                onCellClick={onCellClick}
-                onCellMouseOver={onCellMouseOver}
-                onCellMouseDown={onCellMouseDown}
-                onGridClick={onGridClick}
-                onGridUnClick={onGridUnClick}
-            />
-            <Grid
-                className="ghost-canvas"
-                matrix={matrix}
-                onCellClick={noop}
-                onCellMouseOver={noop}
-                onCellMouseDown={noop}
-                onGridClick={noop}
-                onGridUnClick={noop}
-            />
+            {Object.keys(grids).map(
+                (gridName) =>
+                    grids[gridName as RepresentationName] && (
+                        <Grid
+                            className={
+                                gridName == "user"
+                                    ? "user-canvas"
+                                    : "ghost-canvas"
+                            }
+                            matrix={
+                                grids[gridName as RepresentationName] || null
+                            }
+                            onCellClick={onCellClick}
+                            onCellMouseOver={onCellMouseOver}
+                            onCellMouseDown={onCellMouseDown}
+                            onGridClick={onGridClick}
+                            onGridUnClick={onGridUnClick}
+                            gridLabel={gridName}
+                        />
+                    )
+            )}
         </div>
     );
 }

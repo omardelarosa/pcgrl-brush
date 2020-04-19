@@ -19,6 +19,7 @@ export interface ButtonProps {
     selected?: boolean;
     buttonName?: SidebarButtonNames;
     buttonText?: string;
+    buttonValue?: string;
     className?: string;
 }
 
