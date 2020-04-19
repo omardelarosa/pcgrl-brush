@@ -6,7 +6,11 @@ import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
-import { TensorFlowService } from "../services/TensorFlow/index";
+import {
+    TensorFlowService,
+    REPRESENTATION_NAMES,
+    RepresentationName,
+} from "../services/TensorFlow";
 import { AppStateService, AppState } from "../services/AppState";
 import { Numeric } from "../services/Numeric";
 import { Tileset } from "./Tileset";
@@ -135,17 +139,33 @@ export class App extends React.Component<AppProps, AppState> {
         nextSize: [number, number]
     ) {
         // Skip TF updates on 0 grid
-        if (!nextGrid[0] && !nextGrid[1]) {
+        if (!nextSize[0] || !nextSize[1]) {
             return;
         }
-        // Convert state to Tensor
-        const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
-            nextGrid,
-            nextSize
-        );
 
-        // TODO: let this update the model on the right
-        this.tfService.predictAndDraw(stateAsTensor);
+        REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
+            // Convert state to Tensor
+            const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
+                nextGrid,
+                nextSize,
+                repName
+            );
+
+            // TODO: let this update the model on the right
+            this.tfService
+                .predictAndDraw(
+                    stateAsTensor,
+                    // This is just temporary
+                    this.state.grid
+                )
+                .then((suggestedGrid) => {
+                    const update = {
+                        suggestedGrids: { ...this.state.suggestedGrids },
+                    };
+                    update.suggestedGrids[repName] = suggestedGrid;
+                    this.setState({ ...update });
+                });
+        });
     }
 
     public render() {
@@ -179,7 +199,10 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     stage={
                         <Stage
-                            matrix={this.state.grid}
+                            grids={{
+                                user: this.state.grid,
+                                ...this.state.suggestedGrids,
+                            }}
                             onGridClick={this.onGridClick}
                             onGridUnClick={this.onGridUnClick}
                             onCellMouseOver={this.onCellMouseOver}

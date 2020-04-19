@@ -2,9 +2,10 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
+import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
-    matrix: number[][];
+    grids: Record<string | RepresentationName, number[][]>;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
@@ -13,7 +14,7 @@ interface StageProps {
 }
 
 export function Stage({
-    matrix,
+    grids,
     onCellClick = noop,
     onCellMouseOver = noop,
     onGridUnClick = noop,
@@ -22,46 +23,18 @@ export function Stage({
 }: StageProps) {
     return (
         <div className="stage rounded-container">
-            <Grid
-                className="user-canvas"
-                matrix={matrix}
-                onCellClick={onCellClick}
-                onCellMouseOver={onCellMouseOver}
-                onCellMouseDown={onCellMouseDown}
-                onGridClick={onGridClick}
-                onGridUnClick={onGridUnClick}
-                gridLabel="user"
-            />
-            <Grid
-                className="ghost-canvas"
-                matrix={matrix}
-                onCellClick={noop}
-                onCellMouseOver={noop}
-                onCellMouseDown={noop}
-                onGridClick={noop}
-                onGridUnClick={noop}
-                gridLabel="narrow"
-            />
-            <Grid
-                className="ghost-canvas"
-                matrix={matrix}
-                onCellClick={noop}
-                onCellMouseOver={noop}
-                onCellMouseDown={noop}
-                onGridClick={noop}
-                onGridUnClick={noop}
-                gridLabel="turtle"
-            />
-            <Grid
-                className="ghost-canvas"
-                matrix={matrix}
-                onCellClick={noop}
-                onCellMouseOver={noop}
-                onCellMouseDown={noop}
-                onGridClick={noop}
-                onGridUnClick={noop}
-                gridLabel="wide"
-            />
+            {Object.keys(grids).map((gridName) => (
+                <Grid
+                    className="user-canvas"
+                    matrix={grids[gridName]}
+                    onCellClick={onCellClick}
+                    onCellMouseOver={onCellMouseOver}
+                    onCellMouseDown={onCellMouseDown}
+                    onGridClick={onGridClick}
+                    onGridUnClick={onGridUnClick}
+                    gridLabel={gridName}
+                />
+            ))}
         </div>
     );
 }

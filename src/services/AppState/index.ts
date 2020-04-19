@@ -10,6 +10,7 @@ import CrateIcon from "../../assets/images/crate_02.png";
 import PlayerIcon from "../../assets/images/player_01.png";
 import GoalIcon from "../../assets/images/environment_02.png";
 import GroundIcon from "../../assets/images/ground_06.png";
+import { RepresentationName } from "../TensorFlow";
 
 // Number of rows and tiles in stage grid
 const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
@@ -26,6 +27,7 @@ export interface AppState {
     grid: number[][]; // A matrix representation of the tile grid.
     gridSize: [number, number];
     isClicking: boolean;
+    suggestedGrids: Record<RepresentationName, number[][]>;
 }
 
 export class AppStateService {
@@ -99,6 +101,21 @@ export class AppStateService {
                 DEFAULT_STAGE_GRID_SIZE[0],
                 DEFAULT_STAGE_GRID_SIZE[1]
             ),
+            // AI Suggested grids
+            suggestedGrids: {
+                narrow: Numeric.createMatrix(
+                    DEFAULT_STAGE_GRID_SIZE[0],
+                    DEFAULT_STAGE_GRID_SIZE[1]
+                ),
+                turtle: Numeric.createMatrix(
+                    DEFAULT_STAGE_GRID_SIZE[0],
+                    DEFAULT_STAGE_GRID_SIZE[1]
+                ),
+                wide: Numeric.createMatrix(
+                    DEFAULT_STAGE_GRID_SIZE[0],
+                    DEFAULT_STAGE_GRID_SIZE[1]
+                ),
+            },
             isClicking: false,
         };
     }

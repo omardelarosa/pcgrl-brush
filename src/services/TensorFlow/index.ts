@@ -10,15 +10,21 @@ type TSModelType = tf.GraphModel | tf.LayersModel | null;
 
 // d['narrow'][1] -> narrow/model_1
 
-interface ModelsDictionary {
+export interface ModelsDictionary {
     narrow?: TSModelType;
     turtle?: TSModelType;
     wide?: TSModelType;
 }
 
-type ModelName = "narrow" | "turtle" | "wide";
+export type RepresentationName = "narrow" | "turtle" | "wide";
 
-const MODEL_URLS: Record<ModelName, string> = {
+export const REPRESENTATION_NAMES: RepresentationName[] = [
+    "narrow",
+    "turtle",
+    "wide",
+];
+
+const MODEL_URLS: Record<RepresentationName, string> = {
     narrow: "/models-tfjs/sokoban/narrow/model_1/model.json",
     turtle: "/models-tfjs/sokoban/turtle/model_1/model.json",
     wide: "/models-tfjs/sokoban/wide/model_1/model.json",
@@ -74,20 +80,25 @@ export class TensorFlowService {
         for (let key in MODEL_URLS) {
             const url =
                 window.location.href.split("src")[0] +
-                MODEL_URLS[key as ModelName];
+                MODEL_URLS[key as RepresentationName];
             console.log("url: ", key, url);
             let model = await tf.loadGraphModel(url);
             console.log("Loaded model: ", model);
-            fetchedModels[key as ModelName] = model;
+            fetchedModels[key as RepresentationName] = model;
         }
         return fetchedModels;
     }
 
     public transformStateToTensor(
         gridState: number[][],
-        gridSize: [number, number]
+        gridSize: [number, number],
+        representationName: RepresentationName
     ): Tensor {
-        return TensorFlowService.transformStateToTensor(gridState, gridSize);
+        return TensorFlowService.transformStateToTensor(
+            gridState,
+            gridSize,
+            representationName
+        );
     }
 
     /**
@@ -100,7 +111,8 @@ export class TensorFlowService {
      */
     public static transformStateToTensor(
         gridState: number[][],
-        gridSize: [number, number]
+        gridSize: [number, number],
+        representationName: RepresentationName
     ): Tensor {
         const encodingDim = 5; // the dimension of the OneHot encoding
         const stateCopy: number[][] = Numeric.cloneMatrix(gridState);
@@ -118,7 +130,10 @@ export class TensorFlowService {
         return tf.cast(stateExpanded, "float32");
     }
 
-    public async predictAndDraw(stateAsTensor: Tensor) {
+    public async predictAndDraw(
+        stateAsTensor: Tensor,
+        rawState: number[][]
+    ): Promise<number[][]> {
         let model: TSModelType | undefined | null;
         if (!model) {
             console.log("Model unavailable! Fetching...");
@@ -131,28 +146,28 @@ export class TensorFlowService {
         // let a = tf.tensor4d(stateAsTensor, [1, 10, 10, 5], "float32");
         // calls predict on the model
 
-        // if (model) {
-        //     console.log("Input: ");
-        //     stateAsTensor.print();
-        //     let preResp: any = model.predict(stateAsTensor);
-        //     // console.log("Model Respose", preResp);
-        //     // console.log("Model Respose", preResp.print());
-        //     console.log("Output: ");
-        //     // const intResult = tf.cast(preResp, "int32");
-        //     const intResult = preResp;
-        //     // intResult.print();
-        //     const arr = await intResult.array();
-        //     console.log(arr);
-        // } else {
-        //     console.warn("Unable to initialize TensorFlow model.");
-        // }
+        if (model) {
+            console.log("Input: ");
+            stateAsTensor.print();
+            try {
+                let preResp: any = model.predict(stateAsTensor);
+                // console.log("Model Respose", preResp);
+                // console.log("Model Respose", preResp.print());
+                console.log("Output: ");
+                // const intResult = tf.cast(preResp, "int32");
+                const intResult = preResp;
+                // intResult.print();
+                const arr = await intResult.array();
+                console.log(arr);
+            } catch (err) {
+                console.warn("Unable to parse state");
+                console.error(err);
+            }
+        } else {
+            console.warn("Unable to initialize TensorFlow model.");
+        }
 
-        // let actionIndex = preResp[0].indexOf(Math.max(...preResp[0]))
-        /*
-      let indexes = preResp[0].map((val: any, ind: any) => {return {ind, val}})
-             .sort((a: { val: number; }, b: { val: number; }) => {return a.val >
-      b.val ? 1 : a.val == b.val ? 0 : -1 }) .map((obj: { ind: any; }) => obj.ind);
-      let actionIndex = indexes[indexes.length-1];
-      console.log(actionIndex);*/
+        // NOTE: For now, this just echos the input
+        return rawState;
     }
 }
