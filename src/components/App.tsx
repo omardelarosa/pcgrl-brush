@@ -17,10 +17,8 @@ import {
     AppState,
     SuggestedGrids,
 } from "../services/AppState";
-import { Numeric } from "../services/Numeric";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
-import { Tensor, Rank } from "@tensorflow/tfjs";
 
 interface AppProps {}
 
@@ -124,7 +122,7 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
-        const { grid, t } = TensorFlowService.createGameGrid(newSize);
+        const { grid } = TensorFlowService.createGameGrid(newSize);
         this.setState({
             gridSize: newSize,
             grid,
@@ -140,47 +138,33 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        Promise.all(
-            REPRESENTATION_NAMES.map((repName: RepresentationName) => {
-                // NOTE: this is very slow if all representations are processed each time.
-                // Only process current representation.
-                console.log(
-                    "RepName",
-                    repName,
-                    this.state.currentRepresentation
-                );
-                if (repName !== this.state.currentRepresentation) {
-                    return;
-                }
+        REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
+            // NOTE: this is very slow if all representations are processed each time.
+            // Only process current representation.
+            console.log("RepName", repName, this.state.currentRepresentation);
+            if (repName !== this.state.currentRepresentation) {
+                return null;
+            }
 
-                // Convert state to Tensor
-                this.tfService
-                    .transformStateToTensor(nextGrid, nextSize, repName)
-                    .then((stateAsTensors: Tensor[]) => {
-                        // TODO: let this update the model on the right
-                        return this.tfService
-                            .predictAndDraw(
-                                stateAsTensors,
-                                // This is just temporary
-                                this.state.grid,
-                                repName
-                            )
-                            .then((suggestedGrid: number[][]) => {
-                                console.log(
-                                    "SuggestedGridFromModel:",
-                                    suggestedGrid
-                                );
-                                const update = {
-                                    suggestedGrids: {} as SuggestedGrids,
-                                };
-                                update.suggestedGrids[repName] = suggestedGrid;
-                                // this.setState(update);
-                                console.log("Update:", update);
-                                return;
-                            });
-                    });
-            })
-        );
+            // Convert state to Tensor
+            this.tfService
+                .predictAndDraw(
+                    this.state.grid,
+                    this.state.gridSize,
+                    repName
+                    // TODO: add offset?
+                )
+                .then((suggestedGrid: number[][]) => {
+                    console.log("SuggestedGridFromModel:", suggestedGrid);
+                    const update = {
+                        suggestedGrids: {} as SuggestedGrids,
+                    };
+                    update.suggestedGrids[repName] = suggestedGrid;
+                    // this.setState(update);
+                    // console.log("Update:", update);
+                    return null;
+                });
+        });
     }
 
     public render() {

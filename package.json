@@ -3,7 +3,6 @@
     "version": "0.0.3",
     "private": true,
     "dependencies": {
-        "@aas395/numjs": "^0.16.3",
         "@tensorflow/tfjs": "^1.7.1",
         "@testing-library/jest-dom": "^4.2.4",
         "@testing-library/react": "^9.3.2",

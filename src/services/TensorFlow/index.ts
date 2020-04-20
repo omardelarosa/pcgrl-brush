@@ -1,8 +1,6 @@
 // Loading tensorflow ideally only at the app level
 import * as tf from "@tensorflow/tfjs";
-import { Numeric } from "../Numeric";
-import { Tensor, Rank, Tensor2D } from "@tensorflow/tfjs";
-import { SidebarButtonNames } from "../../components/Button/index";
+import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 import { TILES } from "../../constants/tiles";
 
 // Testing basic functionality of tensorflow using code from:
@@ -141,13 +139,27 @@ export class TensorFlowService {
     public async transformStateToTensor(
         gridState: number[][],
         gridSize: [number, number],
-        representationName: RepresentationName
-    ): Promise<Tensor[]> {
+        representationName: RepresentationName,
+        offset = [0, 0]
+    ): Promise<Tensor | null> {
         return TensorFlowService.transformStateToTensor(
             gridState,
             gridSize,
-            representationName
+            representationName,
+            offset
         );
+    }
+
+    public static oneHotEncode2DState(t: Tensor, encodingDim = 5): Tensor {
+        const tArr = t.arraySync() as number[][]; // TODO: not sync?
+        const stateExpanded: Tensor = tf.stack(
+            tArr.map((row) => {
+                // OneHot encode each row
+                return tf.oneHot(tf.tensor1d(row, "int32"), encodingDim);
+            })
+        );
+
+        return tf.cast(stateExpanded.expandDims(), "int32");
     }
 
     /**
@@ -161,69 +173,31 @@ export class TensorFlowService {
     public static async transformStateToTensor(
         gridState: number[][],
         gridSize: [number, number],
-        representationName: RepresentationName
-    ): Promise<Tensor[]> {
-        const encodingDim = 5; // the dimension of the OneHot encoding
-        const stateCopy: number[][] = Numeric.cloneMatrix(gridState);
-
-        // Pad with 1s, generate all positions
-        const states: Tensor[] = [];
+        representationName: RepresentationName,
+        offset = [0, 0]
+    ): Promise<Tensor | null> {
         // Narrow/turtle
         if (representationName !== "wide") {
-            const tState = tf.tensor2d(stateCopy);
-            console.log("tState: ");
+            const tState = tf.tensor2d(gridState);
             const [h, w] = tState.shape;
-            for (let i = 0; i < h; i++) {
-                for (let j = 0; j < w; j++) {
-                    const tStatePadded = tState.pad(
-                        [
-                            [w - j, j],
-                            [h - i, i],
-                        ],
-                        1
-                    );
-                    tStatePadded.print();
-
-                    const statePaddedArr = (await tStatePadded.array()) as number[][];
-                    // Stack onehot encoded rows
-                    let stateExpanded: Tensor = tf.stack(
-                        statePaddedArr.map((row) => {
-                            // OneHot encode each row
-                            return tf.oneHot(
-                                tf.tensor1d(row, "int32"),
-                                encodingDim
-                            );
-                        })
-                    );
-
-                    stateExpanded = stateExpanded.expandDims();
-
-                    states.push(tf.cast(stateExpanded, "float32"));
-
-                    states.push(stateExpanded);
-                }
-            }
+            const [j, i] = offset;
+            // Pad with 1s, generate all positions
+            return tState.pad(
+                [
+                    [w - j, j],
+                    [h - i, i],
+                ],
+                TILES.SOLID
+            );
             // Wide representation
         } else {
-            // Stack onehot encoded rows
-            let stateExpanded: Tensor = tf.stack(
-                stateCopy.map((row) => {
-                    // OneHot encode each row
-                    return tf.oneHot(tf.tensor1d(row, "int32"), encodingDim);
-                })
-            );
-
-            stateExpanded = stateExpanded.expandDims();
-
-            states.push(tf.cast(stateExpanded, "float32"));
+            return tf.tensor2d(gridState);
         }
-
-        return states;
     }
 
     public async predictAndDraw(
-        stateAsTensors: Tensor[],
-        rawState: number[][],
+        gridState: number[][],
+        gridSize: [number, number],
         repName: RepresentationName
     ): Promise<number[][]> {
         let model: TSModelType | undefined | null;
@@ -234,31 +208,47 @@ export class TensorFlowService {
                 model = models[repName]; // model by default for now
             }
         }
-        // prepare state input
-        // let a = tf.tensor4d(stateAsTensor, [1, 10, 10, 5], "float32");
-        // calls predict on the model
 
         const results = [];
-        if (model) {
-            console.log("Input: ");
-            for (let i = 0; i < stateAsTensors.length; i++) {
-                const state = stateAsTensors[i];
+
+        // 1. Create 2D tensor from raw state
+        const stateAs2DTensor = await TensorFlowService.transformStateToTensor(
+            gridState,
+            gridSize,
+            repName
+        );
+
+        // 2. Process tensor
+        if (stateAs2DTensor) {
+            // 3. Create a OneHotEncoded Grid
+            const stateOneHotEncoded = await TensorFlowService.oneHotEncode2DState(
+                stateAs2DTensor
+            );
+            if (model) {
+                const state = stateOneHotEncoded;
+                console.log("Input: ");
+                stateAs2DTensor.print();
+                // 4. Send state through TF model for given representation
                 try {
                     let preResp: any = model.predict(state.cast("float32"));
-                    // console.log("Model Respose", preResp);
-                    // console.log("Model Respose", preResp.print());
-                    console.log("Output: ");
-                    const intResult = tf.cast(preResp, "int32");
-                    // const intResult = preResp;
-                    // intResult.print();
+                    // 5. Flatten oneHotEncoded array, use argMax to convert to int
+                    const intResult = tf
+                        .cast(preResp, "int32")
+                        .flatten()
+                        .argMax();
                     const arr = await intResult.array();
-                    console.log("intResult", arr);
+                    console.log("Output: ", arr);
+
+                    // TODO: for narrow/turtle, a chain of changes needs to be made here.
+
+                    // TODO: apply changes and return new state.
                     results.push(arr);
                 } catch (err) {
                     console.warn("Unable to parse state");
                     console.error(err);
                 }
             }
+            // 2a. warning message
         } else {
             console.warn("Unable to initialize TensorFlow model.");
         }

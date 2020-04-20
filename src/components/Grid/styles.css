@@ -61,7 +61,7 @@
 }
 
 @keyframes playerAnim {
-    from{
+    from {
         background-position-x: 0px;
     }
     to {
@@ -79,7 +79,7 @@
 }
 
 @keyframes targetAnim {
-    from{
+    from {
         background-position-x: 0px;
     }
     to {

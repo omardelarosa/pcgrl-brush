@@ -29,7 +29,7 @@ export function Stage({
                     grids[gridName as RepresentationName] && (
                         <Grid
                             className={
-                                gridName == "user"
+                                gridName === "user"
                                     ? "user-canvas"
                                     : "ghost-canvas"
                             }

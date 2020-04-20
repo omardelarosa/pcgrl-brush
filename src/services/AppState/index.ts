@@ -1,6 +1,5 @@
 import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
-import { Numeric } from "../Numeric";
 import { TilesetButtonProps } from "../../components/TilesetButton";
 import { RepresentationName } from "../TensorFlow";
 import { TILES } from "../../constants/tiles";
