@@ -25,9 +25,10 @@ export function Stage({
     return (
         <div className="stage rounded-container">
             {Object.keys(grids).map(
-                (gridName) =>
+                (gridName, idx) =>
                     grids[gridName as RepresentationName] && (
                         <Grid
+                            key={"grid_element_" + idx}
                             className={
                                 gridName === "user"
                                     ? "user-canvas"
@@ -36,11 +37,25 @@ export function Stage({
                             matrix={
                                 grids[gridName as RepresentationName] || null
                             }
-                            onCellClick={onCellClick}
-                            onCellMouseOver={onCellMouseOver}
-                            onCellMouseDown={onCellMouseDown}
-                            onGridClick={onGridClick}
-                            onGridUnClick={onGridUnClick}
+                            onCellClick={
+                                gridName === "user" ? onCellClick : undefined
+                            }
+                            onCellMouseOver={
+                                gridName === "user"
+                                    ? onCellMouseOver
+                                    : undefined
+                            }
+                            onCellMouseDown={
+                                gridName === "user"
+                                    ? onCellMouseDown
+                                    : undefined
+                            }
+                            onGridClick={
+                                gridName === "user" ? onGridClick : undefined
+                            }
+                            onGridUnClick={
+                                gridName === "user" ? onGridUnClick : undefined
+                            }
                             gridLabel={gridName}
                         />
                     )

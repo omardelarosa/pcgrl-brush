@@ -18,11 +18,12 @@ export function Toolbar({
 }: ToolbarProps) {
     return (
         <div className="toolbar rounded-container">
-            {buttons.map((props: ButtonProps) => (
-                <Button {...props} />
+            {buttons.map((props: ButtonProps, idx: number) => (
+                <Button {...props} key={"toolbar_button_" + idx} />
             ))}
             {enableResize && (
                 <SizeUpdater
+                    key="size_updater"
                     onUpdateGridSize={onUpdateGridSize}
                     gridSize={gridSize}
                 />

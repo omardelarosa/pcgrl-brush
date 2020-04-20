@@ -11,6 +11,7 @@ import {
     REPRESENTATION_NAMES,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
+    IPredictionResult,
 } from "../services/TensorFlow";
 import {
     AppStateService,
@@ -106,7 +107,6 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             grid,
         });
-        console.log(grid);
         this.updateGhostLayer(grid, this.state.gridSize);
     }
 
@@ -141,11 +141,11 @@ export class App extends React.Component<AppProps, AppState> {
         REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
             // NOTE: this is very slow if all representations are processed each time.
             // Only process current representation.
-            console.log("RepName", repName, this.state.currentRepresentation);
+
             if (repName !== this.state.currentRepresentation) {
                 return null;
             }
-
+            console.log(`Processing state using ${repName} model`);
             // Convert state to Tensor
             this.tfService
                 .predictAndDraw(
@@ -154,13 +154,16 @@ export class App extends React.Component<AppProps, AppState> {
                     repName
                     // TODO: add offset?
                 )
-                .then((suggestedGrid: number[][]) => {
-                    console.log("SuggestedGridFromModel:", suggestedGrid);
+                .then(({ suggestedGrid, targets }: IPredictionResult) => {
+                    console.log(
+                        "Suggestion received from model:",
+                        suggestedGrid
+                    );
                     const update = {
                         suggestedGrids: {} as SuggestedGrids,
                     };
                     update.suggestedGrids[repName] = suggestedGrid;
-                    // this.setState(update);
+                    this.setState(update);
                     // console.log("Update:", update);
                     return null;
                 });

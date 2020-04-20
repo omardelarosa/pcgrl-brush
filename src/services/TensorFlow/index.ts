@@ -23,6 +23,11 @@ export interface IGrid {
 
 export type RepresentationName = "narrow" | "turtle" | "wide";
 
+export interface IPredictionResult {
+    suggestedGrid: number[][];
+    targets: number[];
+}
+
 export const REPRESENTATION_NAMES: RepresentationName[] = [
     "narrow",
     "turtle",
@@ -57,7 +62,7 @@ export class TensorFlowService {
     }
 
     public static createGameGrid(size: [number, number]): IGrid {
-        const t = tf.fill(size, TILES.SOLID, "int32") as Tensor2D;
+        const t = tf.fill(size, TILES.EMPTY, "int32") as Tensor2D;
         return {
             grid: t.arraySync() as number[][],
             t,
@@ -125,12 +130,17 @@ export class TensorFlowService {
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
         for (let key in MODEL_URLS) {
-            const url =
-                window.location.href.split("src")[0] +
-                MODEL_URLS[key as RepresentationName];
-            console.log("url: ", key, url);
-            let model = await tf.loadGraphModel(url);
-            console.log("Loaded model: ", model);
+            let model: TSModelType | null | undefined = this.models[
+                key as RepresentationName
+            ];
+            if (!model) {
+                const url =
+                    window.location.href.split("src")[0] +
+                    MODEL_URLS[key as RepresentationName];
+                console.log("url: ", key, url);
+                model = await tf.loadGraphModel(url);
+                console.log("Loaded model: ", model);
+            }
             fetchedModels[key as RepresentationName] = model;
         }
         return fetchedModels;
@@ -176,9 +186,20 @@ export class TensorFlowService {
         representationName: RepresentationName,
         offset = [0, 0]
     ): Promise<Tensor | null> {
+        // 0. Unsupported size
+        let shouldSlice = false;
+        if (gridSize[0] > 5 || gridSize[1] > 5) {
+            shouldSlice = true;
+        }
+
+        let tState = tf.tensor2d(gridState);
+        if (shouldSlice) {
+            // Slice into a supported grid size.
+            // TODO: use offset to find slice.
+            tState = tState.slice([0, 0], [5, 5]);
+        }
         // Narrow/turtle
         if (representationName !== "wide") {
-            const tState = tf.tensor2d(gridState);
             const [h, w] = tState.shape;
             const [j, i] = offset;
             // Pad with 1s, generate all positions
@@ -191,7 +212,7 @@ export class TensorFlowService {
             );
             // Wide representation
         } else {
-            return tf.tensor2d(gridState);
+            return tState;
         }
     }
 
@@ -199,8 +220,8 @@ export class TensorFlowService {
         gridState: number[][],
         gridSize: [number, number],
         repName: RepresentationName
-    ): Promise<number[][]> {
-        let model: TSModelType | undefined | null;
+    ): Promise<IPredictionResult> {
+        let model: TSModelType | undefined | null = this.models[repName];
         if (!model) {
             console.log("Model unavailable! Fetching...");
             let models: ModelsDictionary | null = await this.onInit();
@@ -209,25 +230,41 @@ export class TensorFlowService {
             }
         }
 
-        const results = [];
+        const targets = [];
+
+        // 0. Ignore grids that are too small.
+        if (gridSize[0] < 5 || gridSize[1] < 5) {
+            return {
+                suggestedGrid: gridState,
+                targets: [],
+            };
+        }
 
         // 1. Create 2D tensor from raw state
-        const stateAs2DTensor = await TensorFlowService.transformStateToTensor(
+        let t2Dstate = await TensorFlowService.transformStateToTensor(
             gridState,
             gridSize,
             repName
         );
 
+        // 1a. Unable to transform state to a tensor
+        if (!t2Dstate) {
+            return {
+                suggestedGrid: gridState,
+                targets: [],
+            };
+        }
+
         // 2. Process tensor
-        if (stateAs2DTensor) {
+        if (t2Dstate) {
             // 3. Create a OneHotEncoded Grid
             const stateOneHotEncoded = await TensorFlowService.oneHotEncode2DState(
-                stateAs2DTensor
+                t2Dstate
             );
             if (model) {
                 const state = stateOneHotEncoded;
                 console.log("Input: ");
-                stateAs2DTensor.print();
+                t2Dstate.print();
                 // 4. Send state through TF model for given representation
                 try {
                     let preResp: any = model.predict(state.cast("float32"));
@@ -242,7 +279,7 @@ export class TensorFlowService {
                     // TODO: for narrow/turtle, a chain of changes needs to be made here.
 
                     // TODO: apply changes and return new state.
-                    results.push(arr);
+                    targets.push(arr);
                 } catch (err) {
                     console.warn("Unable to parse state");
                     console.error(err);
@@ -254,6 +291,9 @@ export class TensorFlowService {
         }
 
         // NOTE: For now, this just echos the input
-        return results;
+        return {
+            suggestedGrid: (await t2Dstate.array()) as number[][],
+            targets,
+        };
     }
 }

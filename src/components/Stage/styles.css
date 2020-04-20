@@ -12,3 +12,58 @@
 .ghost-canvas {
     opacity: 0.7;
 }
+
+.ghost-canvas .grid-row .grid-cell {
+    flex: 1 0;
+    flex-basis: 100%;
+    width: 32px;
+    height: 32px;
+    background-color: #fff;
+    /* border-left: 1px solid; This might be sideways, given the flexbox */
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+    /* This is a basic sprite mapping */
+    background-image: url(../../assets/images/tiles.png);
+    background-size: 256px 256px;
+    image-rendering: pixelated;
+}
+
+.ghost-canvas .grid-cell.t0 {
+    background-position: 0px 0px;
+}
+
+.ghost-canvas .grid-cell.t1 {
+    background-position: 0px -32px;
+}
+
+.ghost-canvas .grid-cell.t2 {
+    background-position: 0px -64px;
+    animation: ghostPlayerAnim 1s steps(3) infinite;
+}
+
+@keyframes ghostPlayerAnim {
+    from {
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -96px;
+    }
+}
+
+.ghost-canvas .grid-cell.t3 {
+    background-position: 0px -64px;
+}
+
+.ghost-canvas .grid-cell.t4 {
+    background-position: 0px -128px;
+    animation: ghostTargetAnim 1s steps(4) infinite;
+}
+
+@keyframes ghostTargetAnim {
+    from {
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -128px;
+    }
+}
