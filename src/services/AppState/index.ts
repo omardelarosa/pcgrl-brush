@@ -7,6 +7,7 @@ import { TensorFlowService } from "../TensorFlow/index";
 
 // Number of rows and tiles in stage grid
 const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
+const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
 
 type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
@@ -25,6 +26,7 @@ export interface AppState {
     isClicking: boolean;
     suggestedGrids: SuggestedGrids;
     currentRepresentation?: RepresentationName;
+    playerPos: [number, number];
 }
 
 export class AppStateService {
@@ -105,6 +107,7 @@ export class AppStateService {
                 turtle: null,
                 wide: null,
             },
+            playerPos: DEFAULT_PLAYER_POS,
             isClicking: false,
         };
     }

@@ -20,6 +20,7 @@ import {
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
+import { TILES } from "../constants/tiles";
 
 interface AppProps {}
 
@@ -33,7 +34,15 @@ export class App extends React.Component<AppProps, AppState> {
         this.tfService = new TensorFlowService();
     }
 
-    public componentDidMount() {}
+    public componentDidMount() {
+        // Add player
+        const pos = this.state.playerPos;
+        const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+        this.setPlayerPosOnGrid(grid, [0, 0], pos);
+        this.setState({
+            grid,
+        });
+    }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
         if (p.buttonName === SidebarButtonNames.TRASH) {
@@ -92,21 +101,30 @@ export class App extends React.Component<AppProps, AppState> {
 
     public activateCell(row: number, col: number, data: number): void {
         const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+        const update = { grid, playerPos: this.state.playerPos };
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
         ) {
-            grid[row][col] = this.state.selectedTilesetButtonName as number;
+            const tile = this.state.selectedTilesetButtonName as number;
+            if (tile == TILES.PLAYER) {
+                // Remove previous player position
+                this.setPlayerPosOnGrid(update.grid, this.state.playerPos, [
+                    row,
+                    col,
+                ]);
+                update.playerPos = [row, col];
+            }
+            update.grid[row][col] = tile;
         } else if (
             this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
         ) {
-            grid[row][col] = 0;
+            update.grid[row][col] = 0;
         } else {
             return;
         }
-        this.setState({
-            grid,
-        });
+        update.grid = grid;
+        this.setState(update);
         this.updateGhostLayer(grid, this.state.gridSize);
     }
 
@@ -119,6 +137,16 @@ export class App extends React.Component<AppProps, AppState> {
         });
 
         this.updateGhostLayer(nextGrid, this.state.gridSize);
+    }
+
+    public setPlayerPosOnGrid(
+        grid: number[][],
+        currentPos: [number, number],
+        nextPos: [number, number]
+    ): number[][] {
+        grid[currentPos[0]][currentPos[1]] = TILES.EMPTY; // remove from prev
+        grid[nextPos[0]][nextPos[1]] = TILES.PLAYER; // add next
+        return grid;
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
