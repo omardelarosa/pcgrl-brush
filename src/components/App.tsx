@@ -35,13 +35,26 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public componentDidMount() {
-        // Add player
-        const pos = this.state.playerPos;
-        const { grid } = TensorFlowService.cloneGrid(this.state.grid);
-        this.setPlayerPosOnGrid(grid, [0, 0], pos);
+        this.onInit();
+    }
+
+    public onInit(): void {
+        // 1. Set to Narrow
         this.setState({
-            grid,
+            currentRepresentation: "narrow",
         });
+
+        // 2. Add player
+        setTimeout(() => {
+            const pos = this.state.playerPos;
+            const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+            const updatedGrid = this.setPlayerPosOnGrid(grid, [0, 0], pos);
+            this.setState({
+                grid: updatedGrid,
+            });
+            // 3. Update ghostLayer
+            this.updateGhostLayer(updatedGrid, this.state.gridSize, "narrow");
+        }, 0);
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
@@ -54,18 +67,17 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        this.setState({
-            selectedToolbarButtonName: p.buttonName,
-        });
-
+    public onToolbarButtonClick = (_: React.MouseEvent, p: ButtonProps) => {
         // When user clicks on a button matching the representation name, update state
         const val: RepresentationName = p.buttonValue as RepresentationName;
         if (REPRESENTATION_NAMES_DICT[val]) {
             this.setState({
+                selectedToolbarButtonName: p.buttonName,
                 currentRepresentation: val,
             });
         }
+
+        this.updateGhostLayer(this.state.grid, this.state.gridSize, val);
     };
 
     public onTilesetButtonClick = (
@@ -159,18 +171,21 @@ export class App extends React.Component<AppProps, AppState> {
 
     public async updateGhostLayer(
         nextGrid: number[][],
-        nextSize: [number, number]
+        nextSize: [number, number],
+        repName?: RepresentationName
     ) {
         // Skip TF updates on 0 grid
         if (!nextSize[0] || !nextSize[1]) {
             return;
         }
 
+        const currentRepName = repName || this.state.currentRepresentation;
+
         REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
             // NOTE: this is very slow if all representations are processed each time.
             // Only process current representation.
 
-            if (repName !== this.state.currentRepresentation) {
+            if (repName !== currentRepName) {
                 return null;
             }
             console.log(`Processing state using ${repName} model`);
@@ -219,8 +234,8 @@ export class App extends React.Component<AppProps, AppState> {
                             buttons={this.state.toolbarButtons.map((b) => ({
                                 ...b,
                                 selected:
-                                    b.buttonName ===
-                                    this.state.selectedToolbarButtonName,
+                                    b.buttonValue ===
+                                    this.state.currentRepresentation,
                                 onClick: this.onToolbarButtonClick,
                             }))}
                             gridSize={this.state.gridSize}
