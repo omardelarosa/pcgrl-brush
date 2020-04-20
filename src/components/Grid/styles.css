@@ -57,6 +57,16 @@
 
 .grid-cell.t2 {
     background-position: 0px -128px;
+    animation: playerAnim 1s steps(3) infinite;
+}
+
+@keyframes playerAnim {
+    from{
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -192px;
+    }
 }
 
 .grid-cell.t3 {
@@ -65,6 +75,16 @@
 
 .grid-cell.t4 {
     background-position: 0px -256px;
+    animation: targetAnim 1s steps(4) infinite;
+}
+
+@keyframes targetAnim {
+    from{
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -256px;
+    }
 }
 
 .grid-cell::before {
