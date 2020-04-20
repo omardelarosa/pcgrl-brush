@@ -22,7 +22,6 @@ const ICON_CLASSES: Record<TILES, string> = {
 export function TilesetButton(props: TilesetButtonProps) {
     const { text, selected, onClick, buttonValue = TILES.EMPTY } = props;
     const iconClass = ICON_CLASSES[buttonValue];
-    console.log("IconClass: ", iconClass);
     return (
         <div className={"tileset-button-container"}>
             <div className={`tileset-icon ${iconClass}`}></div>

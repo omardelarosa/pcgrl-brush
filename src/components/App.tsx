@@ -166,32 +166,21 @@ export class App extends React.Component<AppProps, AppState> {
                                 repName
                             )
                             .then((suggestedGrid: number[][]) => {
-                                console.log("Suggestedgrid:", suggestedGrid);
-                                return {
-                                    suggestedGrid,
-                                    repName,
+                                console.log(
+                                    "SuggestedGridFromModel:",
+                                    suggestedGrid
+                                );
+                                const update = {
+                                    suggestedGrids: {} as SuggestedGrids,
                                 };
+                                update.suggestedGrids[repName] = suggestedGrid;
+                                // this.setState(update);
+                                console.log("Update:", update);
+                                return;
                             });
                     });
             })
-        ).then((suggestions) => {
-            console.log("suggestions", suggestions);
-            const update = {
-                suggestedGrids: {} as SuggestedGrids,
-            };
-            suggestions.forEach((suggestion) => {
-                console.log(suggestion);
-                // if (suggestion) {
-                //     const { suggestedGrid, repName } = suggestion;
-                //     update.suggestedGrids[
-                //         repName as RepresentationName
-                //     ] = suggestedGrid;
-                // }
-            });
-
-            this.setState(update);
-            return null;
-        });
+        );
     }
 
     public render() {

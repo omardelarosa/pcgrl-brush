@@ -4,6 +4,7 @@ import { Numeric } from "../Numeric";
 import { TilesetButtonProps } from "../../components/TilesetButton";
 import { RepresentationName } from "../TensorFlow";
 import { TILES } from "../../constants/tiles";
+import { TensorFlowService } from "../TensorFlow/index";
 
 // Number of rows and tiles in stage grid
 const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
@@ -97,10 +98,8 @@ export class AppStateService {
             selectedToolbarButtonNames: SidebarButtonNames.PENCIL_BUTTON,
             selectedTilesetButtonName: TILES.SOLID,
             gridSize: DEFAULT_STAGE_GRID_SIZE,
-            grid: Numeric.createMatrix(
-                DEFAULT_STAGE_GRID_SIZE[0],
-                DEFAULT_STAGE_GRID_SIZE[1]
-            ),
+            grid: TensorFlowService.createGameGrid(DEFAULT_STAGE_GRID_SIZE)
+                .grid,
             // AI Suggested grids
             suggestedGrids: {
                 narrow: null,
