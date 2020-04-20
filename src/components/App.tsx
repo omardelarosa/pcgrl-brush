@@ -65,7 +65,7 @@ export class App extends React.Component<AppProps, AppState> {
         p: TilesetButtonProps
     ) => {
         this.setState({
-            selectedTilesetButtonName: p.buttonName,
+            selectedTilesetButtonName: p.buttonValue,
         });
     };
 
@@ -92,19 +92,30 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public activateCell(row: number, col: number, data: number): void {
-        const nextGrid = Numeric.cloneMatrix(this.state.grid);
+        const { grid } = TensorFlowService.cloneGrid(this.state.grid);
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
         ) {
-            nextGrid[row][col] = 1;
+            grid[row][col] = this.state.selectedTilesetButtonName as number;
         } else if (
             this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
         ) {
-            nextGrid[row][col] = 0;
+            grid[row][col] = 0;
         } else {
             return;
         }
+        this.setState({
+            grid,
+        });
+        console.log(grid);
+        this.updateGhostLayer(grid, this.state.gridSize);
+    }
+
+    public clearStage() {
+        const { grid: nextGrid } = TensorFlowService.createGameGrid(
+            this.state.gridSize
+        );
         this.setState({
             grid: nextGrid,
         });
@@ -112,39 +123,12 @@ export class App extends React.Component<AppProps, AppState> {
         this.updateGhostLayer(nextGrid, this.state.gridSize);
     }
 
-    public clearStage() {
-        const [rows, cols] = this.state.gridSize;
-        const nextGrid = Numeric.createMatrix(rows, cols);
-        this.setState({
-            grid: nextGrid,
-        });
-
-        this.updateGhostLayer(nextGrid, [rows, cols]);
-    }
-
     public onUpdateGridSize = (newSize: [number, number]) => {
-        const [rows, cols] = newSize;
-        const [rowsOld, colsOld] = this.state.gridSize;
-        const nextGrid = Numeric.createMatrix(rows, cols);
-        const lastGrid = this.state.grid;
-        // Transfer what is possible from old grid.
-        for (let r = 0; r < rowsOld; r++) {
-            for (let c = 0; c < colsOld; c++) {
-                if (r <= rowsOld) {
-                    const row = nextGrid[r];
-                    if (row && c <= row.length) {
-                        row[c] = lastGrid[r][c];
-                    }
-                }
-            }
-        }
-
+        const { grid, t } = TensorFlowService.createGameGrid(newSize);
         this.setState({
             gridSize: newSize,
-            grid: nextGrid,
+            grid,
         });
-
-        this.updateGhostLayer(nextGrid, newSize);
     };
 
     public async updateGhostLayer(
@@ -237,6 +221,7 @@ export class App extends React.Component<AppProps, AppState> {
                             }))}
                             gridSize={this.state.gridSize}
                             onUpdateGridSize={this.onUpdateGridSize}
+                            enableResize
                         />
                     }
                     stage={
@@ -257,7 +242,7 @@ export class App extends React.Component<AppProps, AppState> {
                             buttons={this.state.tilesetButtons.map((b) => ({
                                 ...b,
                                 selected:
-                                    b.buttonName ===
+                                    b.buttonValue ===
                                     this.state.selectedTilesetButtonName,
                                 onClick: this.onTilesetButtonClick,
                             }))}

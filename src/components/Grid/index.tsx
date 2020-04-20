@@ -35,7 +35,9 @@ function GridCell({
     // TODO: add a classname based on the value to make tiling easier
     return (
         <div
-            className={`grid-cell${data ? " filled" : ""}`}
+            className={`grid-cell${
+                typeof data !== "undefined" ? ` t${data}` : ""
+            }`}
             onClick={() => onCellClick(row, col, data)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
             onMouseDown={() => onCellMouseDown(row, col, data)}

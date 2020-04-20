@@ -8,3 +8,33 @@
     color: white;
     padding: 0.5rem 0.5rem;
 }
+
+.tileset-icon {
+    width: 64px;
+    height: 64px;
+    /* background-color: #fff; */
+    background-image: url(../../assets/images/tiles.png);
+    background-size: 512px 512px;
+    border: 1px solid black;
+    image-rendering: pixelated;
+}
+
+.tileset-icon.t0 {
+    background-position: 0px 0px;
+}
+
+.tileset-icon.t1 {
+    background-position: 0px -64px;
+}
+
+.tileset-icon.t2 {
+    background-position: 0px -128px;
+}
+
+.tileset-icon.t3 {
+    background-position: 0px -192px;
+}
+
+.tileset-icon.t4 {
+    background-position: 0px -256px;
+}

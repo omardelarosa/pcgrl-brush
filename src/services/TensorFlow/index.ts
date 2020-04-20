@@ -1,8 +1,9 @@
 // Loading tensorflow ideally only at the app level
 import * as tf from "@tensorflow/tfjs";
 import { Numeric } from "../Numeric";
-import { Tensor, Rank } from "@tensorflow/tfjs";
+import { Tensor, Rank, Tensor2D } from "@tensorflow/tfjs";
 import { SidebarButtonNames } from "../../components/Button/index";
+import { TILES } from "../../constants/tiles";
 
 // Testing basic functionality of tensorflow using code from:
 // https://www.tensorflow.org/js/guide/tensors_operations
@@ -15,6 +16,11 @@ export interface ModelsDictionary {
     narrow?: TSModelType;
     turtle?: TSModelType;
     wide?: TSModelType;
+}
+
+export interface IGrid {
+    grid: number[][];
+    t: Tensor2D;
 }
 
 export type RepresentationName = "narrow" | "turtle" | "wide";
@@ -50,6 +56,26 @@ export class TensorFlowService {
     constructor() {
         // Does TF setup stuff
         this.onInit();
+    }
+
+    public static createGameGrid(size: [number, number]): IGrid {
+        const t = tf.fill(size, TILES.SOLID, "int32") as Tensor2D;
+        return {
+            grid: t.arraySync() as number[][],
+            t,
+        };
+    }
+
+    public static cloneGrid(grid: number[][]): IGrid {
+        const t = tf.tensor2d(grid);
+        return {
+            grid: t.arraySync() as number[][],
+            t,
+        };
+    }
+
+    public createGrameGrid(size: [number, number]): IGrid {
+        return TensorFlowService.createGameGrid(size);
     }
 
     public stringToRepresentationName(
