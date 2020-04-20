@@ -10,8 +10,13 @@ import {
     TensorFlowService,
     REPRESENTATION_NAMES,
     RepresentationName,
+    REPRESENTATION_NAMES_DICT,
 } from "../services/TensorFlow";
-import { AppStateService, AppState } from "../services/AppState";
+import {
+    AppStateService,
+    AppState,
+    SuggestedGrids,
+} from "../services/AppState";
 import { Numeric } from "../services/Numeric";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
@@ -45,6 +50,14 @@ export class App extends React.Component<AppProps, AppState> {
         this.setState({
             selectedToolbarButtonName: p.buttonName,
         });
+
+        // When user clicks on a button matching the representation name, update state
+        const val: RepresentationName = p.buttonValue as RepresentationName;
+        if (REPRESENTATION_NAMES_DICT[val]) {
+            this.setState({
+                currentRepresentation: val,
+            });
+        }
     };
 
     public onTilesetButtonClick = (
@@ -143,28 +156,57 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
-            // Convert state to Tensor
-            const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
-                nextGrid,
-                nextSize,
-                repName
-            );
+        Promise.all(
+            REPRESENTATION_NAMES.map((repName: RepresentationName) => {
+                // NOTE: this is very slow if all representations are processed each time.
+                // Only process current representation.
+                console.log(
+                    "RepName",
+                    repName,
+                    this.state.currentRepresentation
+                );
+                if (repName !== this.state.currentRepresentation) {
+                    return;
+                }
 
-            // TODO: let this update the model on the right
-            this.tfService
-                .predictAndDraw(
-                    stateAsTensor,
-                    // This is just temporary
-                    this.state.grid
-                )
-                .then((suggestedGrid) => {
-                    const update = {
-                        suggestedGrids: { ...this.state.suggestedGrids },
-                    };
-                    update.suggestedGrids[repName] = suggestedGrid;
-                    this.setState({ ...update });
-                });
+                // Convert state to Tensor
+                this.tfService
+                    .transformStateToTensor(nextGrid, nextSize, repName)
+                    .then((stateAsTensors: Tensor[]) => {
+                        // TODO: let this update the model on the right
+                        return this.tfService
+                            .predictAndDraw(
+                                stateAsTensors,
+                                // This is just temporary
+                                this.state.grid,
+                                repName
+                            )
+                            .then((suggestedGrid: number[][]) => {
+                                console.log("Suggestedgrid:", suggestedGrid);
+                                return {
+                                    suggestedGrid,
+                                    repName,
+                                };
+                            });
+                    });
+            })
+        ).then((suggestions) => {
+            console.log("suggestions", suggestions);
+            const update = {
+                suggestedGrids: {} as SuggestedGrids,
+            };
+            suggestions.forEach((suggestion) => {
+                console.log(suggestion);
+                // if (suggestion) {
+                //     const { suggestedGrid, repName } = suggestion;
+                //     update.suggestedGrids[
+                //         repName as RepresentationName
+                //     ] = suggestedGrid;
+                // }
+            });
+
+            this.setState(update);
+            return null;
         });
     }
 

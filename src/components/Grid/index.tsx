@@ -6,7 +6,7 @@ export type CellHandler = (r: number, c: number, d: number) => void;
 export const noop = () => undefined;
 
 interface GridProps {
-    matrix: number[][];
+    matrix: number[][] | null;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onCellMouseDown?: CellHandler;
@@ -100,16 +100,17 @@ export class Grid extends React.Component<GridProps, GridState> {
                     onMouseUp={() => onGridUnClick(-1, -1, -1)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {this.props.matrix.map((rowItems, idx) => (
-                        <GridRow
-                            items={rowItems}
-                            rowIndex={idx}
-                            key={`row_${idx}`}
-                            onCellClick={onCellClick}
-                            onCellMouseOver={onCellMouseOver}
-                            onCellMouseDown={onCellMouseDown}
-                        />
-                    ))}
+                    {this.props.matrix &&
+                        this.props.matrix.map((rowItems, idx) => (
+                            <GridRow
+                                items={rowItems}
+                                rowIndex={idx}
+                                key={`row_${idx}`}
+                                onCellClick={onCellClick}
+                                onCellMouseOver={onCellMouseOver}
+                                onCellMouseDown={onCellMouseDown}
+                            />
+                        ))}
                 </div>
                 {gridLabel && (
                     <div className="grid-row grid-label">{gridLabel}</div>

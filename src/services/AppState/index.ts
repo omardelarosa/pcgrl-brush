@@ -16,6 +16,9 @@ import { RepresentationName } from "../TensorFlow";
 const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
 
 type ToolbarButtonNames = SidebarButtonNames;
+export type SuggestedGrids = Partial<
+    Record<RepresentationName | "user", number[][] | null>
+>;
 
 export interface AppState {
     sidebarButtons: ButtonProps[];
@@ -27,7 +30,8 @@ export interface AppState {
     grid: number[][]; // A matrix representation of the tile grid.
     gridSize: [number, number];
     isClicking: boolean;
-    suggestedGrids: Record<RepresentationName, number[][]>;
+    suggestedGrids: SuggestedGrids;
+    currentRepresentation?: RepresentationName;
 }
 
 export class AppStateService {
@@ -55,14 +59,17 @@ export class AppStateService {
                 {
                     buttonName: SidebarButtonNames.PENCIL_BUTTON,
                     buttonText: "Narrow",
+                    buttonValue: "narrow",
                 },
                 {
                     buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
                     buttonText: "Turtle",
+                    buttonValue: "turtle",
                 },
                 {
                     buttonName: SidebarButtonNames.DROPLET_BUTTON,
                     buttonText: "Wide",
+                    buttonValue: "wide",
                 },
                 // Add additional buttons here and they will appear in the UI...
             ],
@@ -103,18 +110,9 @@ export class AppStateService {
             ),
             // AI Suggested grids
             suggestedGrids: {
-                narrow: Numeric.createMatrix(
-                    DEFAULT_STAGE_GRID_SIZE[0],
-                    DEFAULT_STAGE_GRID_SIZE[1]
-                ),
-                turtle: Numeric.createMatrix(
-                    DEFAULT_STAGE_GRID_SIZE[0],
-                    DEFAULT_STAGE_GRID_SIZE[1]
-                ),
-                wide: Numeric.createMatrix(
-                    DEFAULT_STAGE_GRID_SIZE[0],
-                    DEFAULT_STAGE_GRID_SIZE[1]
-                ),
+                narrow: null,
+                turtle: null,
+                wide: null,
             },
             isClicking: false,
         };

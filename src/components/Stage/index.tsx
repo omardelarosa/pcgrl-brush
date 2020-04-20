@@ -2,10 +2,11 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
+import { SuggestedGrids } from "../../services/AppState";
 import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
-    grids: Record<string | RepresentationName, number[][]>;
+    grids: SuggestedGrids;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
@@ -23,18 +24,27 @@ export function Stage({
 }: StageProps) {
     return (
         <div className="stage rounded-container">
-            {Object.keys(grids).map((gridName) => (
-                <Grid
-                    className="user-canvas"
-                    matrix={grids[gridName]}
-                    onCellClick={onCellClick}
-                    onCellMouseOver={onCellMouseOver}
-                    onCellMouseDown={onCellMouseDown}
-                    onGridClick={onGridClick}
-                    onGridUnClick={onGridUnClick}
-                    gridLabel={gridName}
-                />
-            ))}
+            {Object.keys(grids).map(
+                (gridName) =>
+                    grids[gridName as RepresentationName] && (
+                        <Grid
+                            className={
+                                gridName == "user"
+                                    ? "user-canvas"
+                                    : "ghost-canvas"
+                            }
+                            matrix={
+                                grids[gridName as RepresentationName] || null
+                            }
+                            onCellClick={onCellClick}
+                            onCellMouseOver={onCellMouseOver}
+                            onCellMouseDown={onCellMouseDown}
+                            onGridClick={onGridClick}
+                            onGridUnClick={onGridUnClick}
+                            gridLabel={gridName}
+                        />
+                    )
+            )}
         </div>
     );
 }
