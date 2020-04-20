@@ -57,6 +57,16 @@
 
 .grid-cell.t2 {
     background-position: 0px -128px;
+    animation: moveX 1s steps(3) infinite;
+}
+
+@keyframes moveX {
+    from{
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -192px;
+    }
 }
 
 .grid-cell.t3 {
