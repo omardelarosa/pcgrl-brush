@@ -2,9 +2,11 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
+import { SuggestedGrids } from "../../services/AppState";
+import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
-    matrix: number[][];
+    grids: SuggestedGrids;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
@@ -13,7 +15,7 @@ interface StageProps {
 }
 
 export function Stage({
-    matrix,
+    grids,
     onCellClick = noop,
     onCellMouseOver = noop,
     onGridUnClick = noop,
@@ -22,24 +24,42 @@ export function Stage({
 }: StageProps) {
     return (
         <div className="stage rounded-container">
-            <Grid
-                className="user-canvas"
-                matrix={matrix}
-                onCellClick={onCellClick}
-                onCellMouseOver={onCellMouseOver}
-                onCellMouseDown={onCellMouseDown}
-                onGridClick={onGridClick}
-                onGridUnClick={onGridUnClick}
-            />
-            <Grid
-                className="ghost-canvas"
-                matrix={matrix}
-                onCellClick={noop}
-                onCellMouseOver={noop}
-                onCellMouseDown={noop}
-                onGridClick={noop}
-                onGridUnClick={noop}
-            />
+            {Object.keys(grids).map(
+                (gridName, idx) =>
+                    grids[gridName as RepresentationName] && (
+                        <Grid
+                            key={"grid_element_" + idx}
+                            className={
+                                gridName === "user"
+                                    ? "user-canvas"
+                                    : "ghost-canvas"
+                            }
+                            matrix={
+                                grids[gridName as RepresentationName] || null
+                            }
+                            onCellClick={
+                                gridName === "user" ? onCellClick : undefined
+                            }
+                            onCellMouseOver={
+                                gridName === "user"
+                                    ? onCellMouseOver
+                                    : undefined
+                            }
+                            onCellMouseDown={
+                                gridName === "user"
+                                    ? onCellMouseDown
+                                    : undefined
+                            }
+                            onGridClick={
+                                gridName === "user" ? onGridClick : undefined
+                            }
+                            onGridUnClick={
+                                gridName === "user" ? onGridUnClick : undefined
+                            }
+                            gridLabel={gridName}
+                        />
+                    )
+            )}
         </div>
     );
 }

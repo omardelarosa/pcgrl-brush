@@ -6,12 +6,21 @@ import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
-import { TensorFlowService } from "../services/TensorFlow/index";
-import { AppStateService, AppState } from "../services/AppState";
-import { Numeric } from "../services/Numeric";
+import {
+    TensorFlowService,
+    REPRESENTATION_NAMES,
+    RepresentationName,
+    REPRESENTATION_NAMES_DICT,
+    IPredictionResult,
+} from "../services/TensorFlow";
+import {
+    AppStateService,
+    AppState,
+    SuggestedGrids,
+} from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
-import { Tensor, Rank } from "@tensorflow/tfjs";
+import { TILES } from "../constants/tiles";
 
 interface AppProps {}
 
@@ -25,7 +34,28 @@ export class App extends React.Component<AppProps, AppState> {
         this.tfService = new TensorFlowService();
     }
 
-    public componentDidMount() {}
+    public componentDidMount() {
+        this.onInit();
+    }
+
+    public onInit(): void {
+        // 1. Set to Narrow
+        this.setState({
+            currentRepresentation: "narrow",
+        });
+
+        // 2. Add player
+        setTimeout(() => {
+            const pos = this.state.playerPos;
+            const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+            const updatedGrid = this.setPlayerPosOnGrid(grid, [0, 0], pos);
+            this.setState({
+                grid: updatedGrid,
+            });
+            // 3. Update ghostLayer
+            this.updateGhostLayer(updatedGrid, this.state.gridSize, "narrow");
+        }, 0);
+    }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
         if (p.buttonName === SidebarButtonNames.TRASH) {
@@ -37,10 +67,17 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public onToolbarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
-        this.setState({
-            selectedToolbarButtonName: p.buttonName,
-        });
+    public onToolbarButtonClick = (_: React.MouseEvent, p: ButtonProps) => {
+        // When user clicks on a button matching the representation name, update state
+        const val: RepresentationName = p.buttonValue as RepresentationName;
+        if (REPRESENTATION_NAMES_DICT[val]) {
+            this.setState({
+                selectedToolbarButtonName: p.buttonName,
+                currentRepresentation: val,
+            });
+        }
+
+        this.updateGhostLayer(this.state.grid, this.state.gridSize, val);
     };
 
     public onTilesetButtonClick = (
@@ -48,7 +85,7 @@ export class App extends React.Component<AppProps, AppState> {
         p: TilesetButtonProps
     ) => {
         this.setState({
-            selectedTilesetButtonName: p.buttonName,
+            selectedTilesetButtonName: p.buttonValue,
         });
     };
 
@@ -75,19 +112,38 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public activateCell(row: number, col: number, data: number): void {
-        const nextGrid = Numeric.cloneMatrix(this.state.grid);
+        const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+        const update = { grid, playerPos: this.state.playerPos };
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
         ) {
-            nextGrid[row][col] = 1;
+            const tile = this.state.selectedTilesetButtonName as number;
+            if (tile === TILES.PLAYER) {
+                // Remove previous player position
+                this.setPlayerPosOnGrid(update.grid, this.state.playerPos, [
+                    row,
+                    col,
+                ]);
+                update.playerPos = [row, col];
+            }
+            update.grid[row][col] = tile;
         } else if (
             this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
         ) {
-            nextGrid[row][col] = 0;
+            update.grid[row][col] = 0;
         } else {
             return;
         }
+        update.grid = grid;
+        this.setState(update);
+        this.updateGhostLayer(grid, this.state.gridSize);
+    }
+
+    public clearStage() {
+        const { grid: nextGrid } = TensorFlowService.createGameGrid(
+            this.state.gridSize
+        );
         this.setState({
             grid: nextGrid,
         });
@@ -95,57 +151,66 @@ export class App extends React.Component<AppProps, AppState> {
         this.updateGhostLayer(nextGrid, this.state.gridSize);
     }
 
-    public clearStage() {
-        const [rows, cols] = this.state.gridSize;
-        const nextGrid = Numeric.createMatrix(rows, cols);
-        this.setState({
-            grid: nextGrid,
-        });
-
-        this.updateGhostLayer(nextGrid, [rows, cols]);
+    public setPlayerPosOnGrid(
+        grid: number[][],
+        currentPos: [number, number],
+        nextPos: [number, number]
+    ): number[][] {
+        grid[currentPos[0]][currentPos[1]] = TILES.EMPTY; // remove from prev
+        grid[nextPos[0]][nextPos[1]] = TILES.PLAYER; // add next
+        return grid;
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
-        const [rows, cols] = newSize;
-        const [rowsOld, colsOld] = this.state.gridSize;
-        const nextGrid = Numeric.createMatrix(rows, cols);
-        const lastGrid = this.state.grid;
-        // Transfer what is possible from old grid.
-        for (let r = 0; r < rowsOld; r++) {
-            for (let c = 0; c < colsOld; c++) {
-                if (r <= rowsOld) {
-                    const row = nextGrid[r];
-                    if (row && c <= row.length) {
-                        row[c] = lastGrid[r][c];
-                    }
-                }
-            }
-        }
-
+        const { grid } = TensorFlowService.createGameGrid(newSize);
         this.setState({
             gridSize: newSize,
-            grid: nextGrid,
+            grid,
         });
-
-        this.updateGhostLayer(nextGrid, newSize);
     };
 
     public async updateGhostLayer(
         nextGrid: number[][],
-        nextSize: [number, number]
+        nextSize: [number, number],
+        repName?: RepresentationName
     ) {
         // Skip TF updates on 0 grid
-        if (!nextGrid[0] && !nextGrid[1]) {
+        if (!nextSize[0] || !nextSize[1]) {
             return;
         }
-        // Convert state to Tensor
-        const stateAsTensor: Tensor = this.tfService.transformStateToTensor(
-            nextGrid,
-            nextSize
-        );
 
-        // TODO: let this update the model on the right
-        this.tfService.predictAndDraw(stateAsTensor);
+        const currentRepName = repName || this.state.currentRepresentation;
+
+        REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
+            // NOTE: this is very slow if all representations are processed each time.
+            // Only process current representation.
+
+            if (repName !== currentRepName) {
+                return null;
+            }
+            console.log(`Processing state using ${repName} model`);
+            // Convert state to Tensor
+            this.tfService
+                .predictAndDraw(
+                    this.state.grid,
+                    this.state.gridSize,
+                    repName
+                    // TODO: add offset?
+                )
+                .then(({ suggestedGrid, targets }: IPredictionResult) => {
+                    console.log(
+                        "Suggestion received from model:",
+                        suggestedGrid
+                    );
+                    const update = {
+                        suggestedGrids: {} as SuggestedGrids,
+                    };
+                    update.suggestedGrids[repName] = suggestedGrid;
+                    this.setState(update);
+                    // console.log("Update:", update);
+                    return null;
+                });
+        });
     }
 
     public render() {
@@ -169,17 +234,21 @@ export class App extends React.Component<AppProps, AppState> {
                             buttons={this.state.toolbarButtons.map((b) => ({
                                 ...b,
                                 selected:
-                                    b.buttonName ===
-                                    this.state.selectedToolbarButtonName,
+                                    b.buttonValue ===
+                                    this.state.currentRepresentation,
                                 onClick: this.onToolbarButtonClick,
                             }))}
                             gridSize={this.state.gridSize}
                             onUpdateGridSize={this.onUpdateGridSize}
+                            enableResize
                         />
                     }
                     stage={
                         <Stage
-                            matrix={this.state.grid}
+                            grids={{
+                                user: this.state.grid,
+                                ...this.state.suggestedGrids,
+                            }}
                             onGridClick={this.onGridClick}
                             onGridUnClick={this.onGridUnClick}
                             onCellMouseOver={this.onCellMouseOver}
@@ -192,7 +261,7 @@ export class App extends React.Component<AppProps, AppState> {
                             buttons={this.state.tilesetButtons.map((b) => ({
                                 ...b,
                                 selected:
-                                    b.buttonName ===
+                                    b.buttonValue ===
                                     this.state.selectedTilesetButtonName,
                                 onClick: this.onTilesetButtonClick,
                             }))}

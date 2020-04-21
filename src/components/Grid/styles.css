@@ -7,6 +7,10 @@
     margin-right: auto; */
 }
 
+.grid-wrapper {
+    margin: 24px;
+}
+
 .grid-cell:first-child {
     border-top: 1px solid;
 }
@@ -22,6 +26,7 @@
     /* align-items: center; */
     justify-content: start;
     flex-direction: column;
+    /* flex-wrap: wrap; */
     margin: 0;
     padding: 0;
     height: auto;
@@ -30,20 +35,56 @@
 .grid-row .grid-cell {
     flex: 1 0;
     flex-basis: 100%;
-    width: 32px;
-    height: 32px;
+    width: 64px;
+    height: 64px;
     background-color: #fff;
     /* border-left: 1px solid; This might be sideways, given the flexbox */
     border-right: 1px solid;
     border-bottom: 1px solid;
     /* This is a basic sprite mapping */
     background-image: url(../../assets/images/tiles.png);
-    background-size: 128px;
-    background-position: 0px;
+    background-size: 512px 512px;
+    image-rendering: pixelated;
 }
 
-.grid-cell.filled {
-    background-position: 64px;
+.grid-cell.t0 {
+    background-position: 0px 0px;
+}
+
+.grid-cell.t1 {
+    background-position: 0px -64px;
+}
+
+.grid-cell.t2 {
+    background-position: 0px -128px;
+    animation: playerAnim 1s steps(3) infinite;
+}
+
+@keyframes playerAnim {
+    from {
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -192px;
+    }
+}
+
+.grid-cell.t3 {
+    background-position: 0px -192px;
+}
+
+.grid-cell.t4 {
+    background-position: 0px -256px;
+    animation: targetAnim 1s steps(4) infinite;
+}
+
+@keyframes targetAnim {
+    from {
+        background-position-x: 0px;
+    }
+    to {
+        background-position-x: -256px;
+    }
 }
 
 .grid-cell::before {

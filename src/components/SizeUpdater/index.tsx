@@ -1,6 +1,5 @@
 import * as React from "react";
 import "./styles.css";
-import { Button } from "../Button";
 
 export interface SizeUpdaterProps {
     gridSize: [number, number];
