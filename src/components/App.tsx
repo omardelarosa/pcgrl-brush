@@ -119,7 +119,7 @@ export class App extends React.Component<AppProps, AppState> {
             SidebarButtonNames.PENCIL_BUTTON
         ) {
             const tile = this.state.selectedTilesetButtonName as number;
-            if (tile == TILES.PLAYER) {
+            if (tile === TILES.PLAYER) {
                 // Remove previous player position
                 this.setPlayerPosOnGrid(update.grid, this.state.playerPos, [
                     row,

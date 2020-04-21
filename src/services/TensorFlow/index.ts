@@ -16,6 +16,12 @@ export interface ModelsDictionary {
     wide?: TSModelType;
 }
 
+export interface IParsedModelOutput {
+    direction?: number;
+    pos?: [number, number];
+    tile?: number;
+}
+
 export interface IGrid {
     grid: number[][];
     t: Tensor2D;
@@ -216,6 +222,41 @@ export class TensorFlowService {
         }
     }
 
+    public parseModelOutput(
+        output: number, // AKA actionIndex
+        repName: RepresentationName
+    ): IParsedModelOutput {
+        const result: IParsedModelOutput = {};
+        // 1. Narrow
+        if (repName === "narrow") {
+            if (output !== 0) {
+                result.tile = output - 1;
+            }
+        }
+        // 2. Turtle
+        else if (repName === "turtle") {
+            console.log(repName);
+            if (output <= 3) {
+                result.direction = output;
+            } else {
+                result.tile = output - 4;
+            }
+        }
+        // 3. Wide
+        else if (repName === "wide") {
+            // Convert to base 5 back to tuple, quick way to do 5x5x5 3D tensor indexing
+            const tuple: number[] = Number(output)
+                .toString(5)
+                .split("")
+                .map(Number);
+            if (tuple.length > 2) {
+                result.pos = [tuple[0], tuple[1]];
+                result.tile = tuple[2];
+            }
+        }
+        return result;
+    }
+
     public async predictAndDraw(
         gridState: number[][],
         gridSize: [number, number],
@@ -275,7 +316,8 @@ export class TensorFlowService {
                         .argMax();
                     const arr = await intResult.array();
                     console.log("Output: ", arr);
-
+                    const parsedOutput = this.parseModelOutput(arr, repName);
+                    console.log("ParsedOutput: ", parsedOutput);
                     // TODO: for narrow/turtle, a chain of changes needs to be made here.
 
                     // TODO: apply changes and return new state.
