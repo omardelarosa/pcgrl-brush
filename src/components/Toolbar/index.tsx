@@ -28,6 +28,7 @@ export function Toolbar({
                     gridSize={gridSize}
                 />
             )}
+            {<div>Foo</div>}
         </div>
     );
 }

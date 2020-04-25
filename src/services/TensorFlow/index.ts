@@ -118,21 +118,6 @@ export class TensorFlowService {
             });
     }
 
-    public static tensorFlowHelloWorld() {
-        // // Initiailize a demo tensor
-        // const a = tf.tensor([
-        //     [1, 2],
-        //     [3, 4],
-        // ]);
-        // console.log("a shape:", a.shape);
-        // a.print();
-        // // Test model
-        // fetchModel().then(async (modelResp) => {
-        //     model = modelResp;
-        //     // game = setInterval(predictAndDraw, 50);
-        // });
-    }
-
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
         for (let key in MODEL_URLS) {
@@ -260,8 +245,14 @@ export class TensorFlowService {
     public async predictAndDraw(
         gridState: number[][],
         gridSize: [number, number],
-        repName: RepresentationName
+        repName: RepresentationName,
+        clickedTileCoords?: [number, number]
     ): Promise<IPredictionResult> {
+        // Log the clicked tile coordinates
+        if (clickedTileCoords) {
+            console.log("clicked tile:", clickedTileCoords);
+        }
+
         let model: TSModelType | undefined | null = this.models[repName];
         if (!model) {
             console.log("Model unavailable! Fetching...");
@@ -314,6 +305,8 @@ export class TensorFlowService {
                         .cast(preResp, "int32")
                         .flatten()
                         .argMax();
+                    console.log("Raw Response:");
+                    preResp.print();
                     const arr = await intResult.array();
                     console.log("Output: ", arr);
                     const parsedOutput = this.parseModelOutput(arr, repName);
