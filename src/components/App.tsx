@@ -114,6 +114,7 @@ export class App extends React.Component<AppProps, AppState> {
     public activateCell(row: number, col: number, data: number): void {
         const { grid } = TensorFlowService.cloneGrid(this.state.grid);
         const update = { grid, playerPos: this.state.playerPos };
+
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
@@ -137,7 +138,7 @@ export class App extends React.Component<AppProps, AppState> {
         }
         update.grid = grid;
         this.setState(update);
-        this.updateGhostLayer(grid, this.state.gridSize);
+        this.updateGhostLayer(grid, this.state.gridSize, undefined, [row, col]);
     }
 
     public clearStage() {
@@ -172,7 +173,8 @@ export class App extends React.Component<AppProps, AppState> {
     public async updateGhostLayer(
         nextGrid: number[][],
         nextSize: [number, number],
-        repName?: RepresentationName
+        repName?: RepresentationName,
+        clickedTile?: [number, number]
     ) {
         // Skip TF updates on 0 grid
         if (!nextSize[0] || !nextSize[1]) {
@@ -194,7 +196,8 @@ export class App extends React.Component<AppProps, AppState> {
                 .predictAndDraw(
                     this.state.grid,
                     this.state.gridSize,
-                    repName
+                    repName,
+                    clickedTile
                     // TODO: add offset?
                 )
                 .then(({ suggestedGrid, targets }: IPredictionResult) => {
