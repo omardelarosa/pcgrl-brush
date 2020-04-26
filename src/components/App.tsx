@@ -247,9 +247,7 @@ export class App extends React.Component<AppProps, AppState> {
                             suggestions
                         );
                         let suggestedGrid = this.state.grid;
-                        const update = {
-                            suggestedGrids: {} as SuggestedGrids,
-                        };
+                        const suggestedGrids = {} as SuggestedGrids;
                         if (suggestions) {
                             suggestions.forEach(
                                 (suggestion: ISuggestion | null) => {
@@ -264,8 +262,14 @@ export class App extends React.Component<AppProps, AppState> {
                             );
                         }
 
-                        update.suggestedGrids[repName] = suggestedGrid;
-                        this.setState(update);
+                        // Save the suggestion in the state update
+                        suggestedGrids[repName] = suggestedGrid;
+
+                        this.setState({
+                            suggestedGrids,
+                            // Add an array of pending suggestions to state
+                            pendingSuggestions: suggestions || [],
+                        });
                         return null;
                     });
             });
@@ -314,6 +318,7 @@ export class App extends React.Component<AppProps, AppState> {
                             onCellMouseOver={this.onCellMouseOver}
                             onCellMouseDown={this.onCellClick}
                             onCellClick={this.onCellClick}
+                            pendingSuggestions={this.state.pendingSuggestions}
                         />
                     }
                     tileset={

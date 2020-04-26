@@ -1,7 +1,7 @@
 import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { TilesetButtonProps } from "../../components/TilesetButton";
-import { RepresentationName } from "../TensorFlow";
+import { RepresentationName, ISuggestion } from "../TensorFlow";
 import { TILES } from "../../constants/tiles";
 import { TensorFlowService } from "../TensorFlow/index";
 
@@ -27,6 +27,7 @@ export interface AppState {
     suggestedGrids: SuggestedGrids;
     currentRepresentation?: RepresentationName;
     playerPos: [number, number];
+    pendingSuggestions: Array<ISuggestion>;
 }
 
 export class AppStateService {
@@ -107,6 +108,7 @@ export class AppStateService {
                 turtle: null,
                 wide: null,
             },
+            pendingSuggestions: [],
             playerPos: DEFAULT_PLAYER_POS,
             isClicking: false,
         };
