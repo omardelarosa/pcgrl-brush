@@ -1,5 +1,5 @@
 import React from "react";
-import { debounce } from "lodash";
+import { debounce, Cancelable } from "lodash";
 import "./App.css";
 import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
@@ -32,6 +32,7 @@ interface AppProps {}
 
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
+
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
@@ -250,7 +251,7 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
-    public updateGhostLayer = debounce(
+    public getSuggestionsFromModel = debounce(
         (
             nextGrid: number[][],
             nextSize: [number, number],
@@ -287,7 +288,7 @@ export class App extends React.Component<AppProps, AppState> {
                     )
                     .then(({ suggestions }: IPredictionResult) => {
                         console.log(
-                            "Suggestion received from model:",
+                            "Suggestions received from model:",
                             suggestions
                         );
                         let suggestedGrid = this.state.grid;
@@ -320,6 +321,18 @@ export class App extends React.Component<AppProps, AppState> {
         },
         GHOST_LAYER_DEBOUNCE_AMOUNT_MS
     );
+
+    public updateGhostLayer = (
+        nextGrid: number[][],
+        nextSize: [number, number],
+        repName?: RepresentationName,
+        clickedTile?: [number, number]
+    ) => {
+        // Cancel any pending calls
+        this.getSuggestionsFromModel.cancel();
+
+        this.getSuggestionsFromModel(nextGrid, nextSize, repName, clickedTile);
+    };
 
     public render() {
         return (

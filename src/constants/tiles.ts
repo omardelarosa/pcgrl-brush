@@ -1,4 +1,4 @@
-export const GHOST_LAYER_DEBOUNCE_AMOUNT_MS = 250;
+export const GHOST_LAYER_DEBOUNCE_AMOUNT_MS = 500;
 
 export enum TILES {
     EMPTY = 0,

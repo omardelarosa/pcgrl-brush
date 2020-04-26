@@ -267,7 +267,7 @@ export class TensorFlowService {
         pos: [number, number],
         gridSize: [number, number]
     ): Array<[number, number] | null> {
-        const radius = 1; // TODO: make neighborhood size configurable
+        const radius = 2; // TODO: make neighborhood size configurable
 
         const neighbors: Array<[number, number] | null> = [];
         for (let i = -1; i <= radius; i++) {
@@ -299,10 +299,10 @@ export class TensorFlowService {
         // Log the clicked tile coordinates
         if (clickedTileCoords) {
             console.log("clicked tile:", clickedTileCoords);
-            console.log(
-                "neighbors:",
-                this.getNeighbors(clickedTileCoords, gridSize)
-            );
+            // console.log(
+            //     "neighbors:",
+            //     this.getNeighbors(clickedTileCoords, gridSize)
+            // );
         }
 
         let model: TSModelType | undefined | null = this.models[repName];
@@ -327,7 +327,9 @@ export class TensorFlowService {
         let t2Dstates = [];
         let neighborhood: Array<[number, number] | null> = [];
         if (repName !== "wide" && clickedTileCoords) {
-            neighborhood = this.getNeighbors(clickedTileCoords, gridSize);
+            const centerTile = clickedTileCoords;
+            // const centerTile: [number, number] = [2, 2];
+            neighborhood = this.getNeighbors(centerTile, gridSize);
             // Create Tensors for each position in neighborhood
             t2Dstates = await Promise.all(
                 neighborhood.map((pos: [number, number] | null) => {
@@ -370,8 +372,10 @@ export class TensorFlowService {
 
         // 2. Process tensor
         if (t2Dstates.length) {
-            console.log("Input: ");
-            t2Dstates.forEach((s) => s?.print());
+            console.log("Input: pos: ", clickedTileCoords, "");
+            // Prints the center input
+            t2Dstates[5]?.print();
+            // t2Dstates.forEach((s) => s?.print());
             // 3. Create a OneHotEncoded Grid
             const statesOneHotEncoded: Array<Tensor | null> = await Promise.all(
                 t2Dstates.map((s) => TensorFlowService.oneHotEncode2DState(s!))
@@ -385,7 +389,6 @@ export class TensorFlowService {
                             if (!state) {
                                 return null;
                             }
-                            // state.print();
                             // 4. Send state through TF model for given representation
                             try {
                                 let preResp: any = model!.predict(
@@ -396,20 +399,14 @@ export class TensorFlowService {
                                     .cast(preResp, "int32")
                                     .flatten()
                                     .argMax();
-                                // console.log("Raw Response:");
-                                preResp.print();
                                 const arr = await intResult.array();
                                 // console.log("Output: ", arr);
                                 const parsedOutput = this.parseModelOutput(
                                     arr,
                                     repName
                                 );
-                                // console.log("ParsedOutput: ", parsedOutput);
                                 return parsedOutput;
                                 // TODO: for narrow/turtle, a chain of changes needs to be made here.
-
-                                // TODO: apply changes and return new state.
-                                // outputs.push(arr);
                             } catch (err) {
                                 console.warn("Unable to parse state");
                                 console.error(err);
@@ -429,8 +426,8 @@ export class TensorFlowService {
 
                         // Handle turtle
                         if (parsedOutput) {
-                            const { tile } = parsedOutput;
-                            const pos = neighborhood[idx];
+                            const { tile, pos: suggestedPos } = parsedOutput;
+                            const pos = suggestedPos || neighborhood[idx];
                             if (pos && tile) {
                                 // Since this might be null, create it
                                 if (!suggestions) {
@@ -442,11 +439,11 @@ export class TensorFlowService {
                     }
                 );
 
+                // Returns an array of suggestions.
                 return {
                     suggestedGrid: gridState,
                     suggestions,
                 };
-                // return new state from grid-buffer
             } else {
                 console.warn("No model available!");
                 return {
