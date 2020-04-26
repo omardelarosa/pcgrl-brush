@@ -1,4 +1,5 @@
 import React from "react";
+import { debounce } from "lodash";
 import "./App.css";
 import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
@@ -6,13 +7,14 @@ import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
 import { Stage } from "./Stage";
 import { Logo } from "./Logo";
+
 import {
     TensorFlowService,
     REPRESENTATION_NAMES,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
     IPredictionResult,
-    IGrid,
+    ISuggestion,
 } from "../services/TensorFlow";
 import {
     AppStateService,
@@ -21,9 +23,7 @@ import {
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
-import { TILES } from "../constants/tiles";
-import { ISuggestion } from "../services/TensorFlow/index";
-import { access } from "fs";
+import { TILES, GHOST_LAYER_DEBOUNCE_AMOUNT_MS } from "../constants/tiles";
 
 interface AppProps {}
 
@@ -206,66 +206,72 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public async updateGhostLayer(
-        nextGrid: number[][],
-        nextSize: [number, number],
-        repName?: RepresentationName,
-        clickedTile?: [number, number]
-    ) {
-        // Skip TF updates on 0 grid
-        if (!nextSize[0] || !nextSize[1]) {
-            return;
-        }
-
-        const currentRepName = repName || this.state.currentRepresentation;
-
-        REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
-            // NOTE: this is very slow if all representations are processed each time.
-            // Only process current representation.
-
-            if (repName !== currentRepName) {
-                return null;
+    public updateGhostLayer = debounce(
+        (
+            nextGrid: number[][],
+            nextSize: [number, number],
+            repName?: RepresentationName,
+            clickedTile?: [number, number]
+        ) => {
+            // Skip TF updates on 0 grid
+            if (!nextSize[0] || !nextSize[1]) {
+                return;
             }
 
-            if (repName !== "wide" && !clickedTile) {
-                return null;
-            }
-            console.log(`Processing state using ${repName} model`);
-            // Convert state to Tensor
-            this.tfService
-                .predictAndDraw(
-                    this.state.grid,
-                    this.state.gridSize,
-                    repName,
-                    clickedTile
-                    // TODO: add offset?
-                )
-                .then(({ suggestions }: IPredictionResult) => {
-                    console.log("Suggestion received from model:", suggestions);
-                    let suggestedGrid = this.state.grid;
-                    const update = {
-                        suggestedGrids: {} as SuggestedGrids,
-                    };
-                    if (suggestions) {
-                        suggestions.forEach(
-                            (suggestion: ISuggestion | null) => {
-                                if (suggestion) {
-                                    suggestedGrid = this.applyUpdateToGrid(
-                                        suggestedGrid,
-                                        suggestion.pos,
-                                        suggestion.tile
-                                    );
-                                }
-                            }
-                        );
-                    }
+            const currentRepName = repName || this.state.currentRepresentation;
 
-                    update.suggestedGrids[repName] = suggestedGrid;
-                    this.setState(update);
+            REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
+                // NOTE: this is very slow if all representations are processed each time.
+                // Only process current representation.
+
+                if (repName !== currentRepName) {
                     return null;
-                });
-        });
-    }
+                }
+
+                if (repName !== "wide" && !clickedTile) {
+                    return null;
+                }
+                console.log(`Processing state using ${repName} model`);
+                // Convert state to Tensor
+                this.tfService
+                    .predictAndDraw(
+                        this.state.grid,
+                        this.state.gridSize,
+                        repName,
+                        clickedTile
+                        // TODO: add offset?
+                    )
+                    .then(({ suggestions }: IPredictionResult) => {
+                        console.log(
+                            "Suggestion received from model:",
+                            suggestions
+                        );
+                        let suggestedGrid = this.state.grid;
+                        const update = {
+                            suggestedGrids: {} as SuggestedGrids,
+                        };
+                        if (suggestions) {
+                            suggestions.forEach(
+                                (suggestion: ISuggestion | null) => {
+                                    if (suggestion) {
+                                        suggestedGrid = this.applyUpdateToGrid(
+                                            suggestedGrid,
+                                            suggestion.pos,
+                                            suggestion.tile
+                                        );
+                                    }
+                                }
+                            );
+                        }
+
+                        update.suggestedGrids[repName] = suggestedGrid;
+                        this.setState(update);
+                        return null;
+                    });
+            });
+        },
+        GHOST_LAYER_DEBOUNCE_AMOUNT_MS
+    );
 
     public render() {
         return (
