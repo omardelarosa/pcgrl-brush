@@ -13,6 +13,7 @@ interface StageProps {
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
     onCellMouseDown?: CellHandler;
+    onGhostGridClick?: CellHandler;
 }
 
 export function Stage({
@@ -22,6 +23,7 @@ export function Stage({
     onGridUnClick = noop,
     onGridClick = noop,
     onCellMouseDown = noop,
+    onGhostGridClick = noop,
     pendingSuggestions = [],
 }: StageProps) {
     return (
@@ -53,7 +55,9 @@ export function Stage({
                                     : undefined
                             }
                             onGridClick={
-                                gridName === "user" ? onGridClick : undefined
+                                gridName === "user"
+                                    ? onGridClick
+                                    : onGhostGridClick
                             }
                             onGridUnClick={
                                 gridName === "user" ? onGridUnClick : undefined

@@ -114,6 +114,22 @@ export class App extends React.Component<AppProps, AppState> {
         this.activateCell(row, col, data);
     };
 
+    /**
+     * Determines where on the grid the player tile is.
+     *
+     * @param grid
+     */
+    public getPlayerPosFromGrid(grid: number[][]): [number, number] | null {
+        for (let i = 0; i < this.state.gridSize[0]; i++) {
+            for (let j = 0; j < this.state.gridSize[1]; j++) {
+                if (grid[i][j] === TILES.PLAYER) {
+                    return [i, j];
+                }
+            }
+        }
+        return null;
+    }
+
     public applyUpdateToGrid(
         grid: number[][],
         pos: [number, number],
@@ -204,6 +220,25 @@ export class App extends React.Component<AppProps, AppState> {
             gridSize: newSize,
             grid,
         });
+    };
+
+    public acceptGhostSuggestions = (): void => {
+        console.log("Accepting Ghost suggestion");
+        // 1. Find suggestedGrid
+        if (!this.state.currentRepresentation) {
+            return;
+        }
+        const suggestedGrid = this.state.suggestedGrids[
+            this.state.currentRepresentation
+        ];
+        if (suggestedGrid) {
+            const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
+            this.setState({
+                grid: suggestedGrid,
+                playerPos: nextPlayerPos ? nextPlayerPos : this.state.playerPos,
+                pendingSuggestions: [],
+            });
+        }
     };
 
     public updateGhostLayer = debounce(
@@ -318,6 +353,7 @@ export class App extends React.Component<AppProps, AppState> {
                             onCellMouseOver={this.onCellMouseOver}
                             onCellMouseDown={this.onCellClick}
                             onCellClick={this.onCellClick}
+                            onGhostGridClick={this.acceptGhostSuggestions}
                             pendingSuggestions={this.state.pendingSuggestions}
                         />
                     }

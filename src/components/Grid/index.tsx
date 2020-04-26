@@ -36,9 +36,6 @@ function GridCell({
     onCellMouseDown?: CellHandler;
     isHighlighted?: boolean;
 }) {
-    if (isHighlighted) {
-        console.log("IS HIGHLIGHTED", row, col);
-    }
     // TODO: add a classname based on the value to make tiling easier
     return (
         <div
