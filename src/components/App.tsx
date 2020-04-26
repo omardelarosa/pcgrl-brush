@@ -12,6 +12,7 @@ import {
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
     IPredictionResult,
+    IGrid,
 } from "../services/TensorFlow";
 import {
     AppStateService,
@@ -21,6 +22,8 @@ import {
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
 import { TILES } from "../constants/tiles";
+import { ISuggestion } from "../services/TensorFlow/index";
+import { access } from "fs";
 
 interface AppProps {}
 
@@ -111,34 +114,67 @@ export class App extends React.Component<AppProps, AppState> {
         this.activateCell(row, col, data);
     };
 
-    public activateCell(row: number, col: number, data: number): void {
-        const { grid } = TensorFlowService.cloneGrid(this.state.grid);
-        const update = { grid, playerPos: this.state.playerPos };
+    public applyUpdateToGrid(
+        grid: number[][],
+        pos: [number, number],
+        tile: number
+    ): number[][] {
+        const [row, col] = pos;
+        if (
+            row >= 0 &&
+            row < this.state.gridSize[0] &&
+            col >= 0 &&
+            col < this.state.gridSize[1]
+        ) {
+            const { grid: gridClone } = TensorFlowService.cloneGrid(grid);
+            let updatedGrid = gridClone;
+            // Handle player update
+            if (tile === TILES.PLAYER) {
+                updatedGrid = this.setPlayerPosOnGrid(
+                    updatedGrid,
+                    this.state.playerPos,
+                    [row, col]
+                );
+            } else {
+                updatedGrid[row][col] = tile;
+            }
+            return updatedGrid;
+        }
+        return grid;
+    }
 
+    public activateCell(row: number, col: number, data: number): void {
+        // const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+        let nextGrid: number[][] = this.state.grid;
+        let nextPlayerPos = this.state.playerPos;
         if (
             this.state.selectedSidebarButtonName ===
             SidebarButtonNames.PENCIL_BUTTON
         ) {
             const tile = this.state.selectedTilesetButtonName as number;
+            nextGrid = this.applyUpdateToGrid(nextGrid, [row, col], tile);
             if (tile === TILES.PLAYER) {
-                // Remove previous player position
-                this.setPlayerPosOnGrid(update.grid, this.state.playerPos, [
-                    row,
-                    col,
-                ]);
-                update.playerPos = [row, col];
+                nextPlayerPos = [row, col];
             }
-            update.grid[row][col] = tile;
         } else if (
             this.state.selectedSidebarButtonName === SidebarButtonNames.ERASE
         ) {
-            update.grid[row][col] = 0;
+            nextGrid = this.applyUpdateToGrid(
+                nextGrid,
+                [row, col],
+                TILES.EMPTY
+            );
         } else {
             return;
         }
-        update.grid = grid;
-        this.setState(update);
-        this.updateGhostLayer(grid, this.state.gridSize, undefined, [row, col]);
+        this.setState({
+            grid: nextGrid,
+            playerPos: nextPlayerPos,
+        });
+        this.updateGhostLayer(nextGrid, this.state.gridSize, undefined, [
+            row,
+            col,
+        ]);
     }
 
     public clearStage() {
@@ -190,6 +226,10 @@ export class App extends React.Component<AppProps, AppState> {
             if (repName !== currentRepName) {
                 return null;
             }
+
+            if (repName !== "wide" && !clickedTile) {
+                return null;
+            }
             console.log(`Processing state using ${repName} model`);
             // Convert state to Tensor
             this.tfService
@@ -200,17 +240,28 @@ export class App extends React.Component<AppProps, AppState> {
                     clickedTile
                     // TODO: add offset?
                 )
-                .then(({ suggestedGrid, targets }: IPredictionResult) => {
-                    console.log(
-                        "Suggestion received from model:",
-                        suggestedGrid
-                    );
+                .then(({ suggestions }: IPredictionResult) => {
+                    console.log("Suggestion received from model:", suggestions);
+                    let suggestedGrid = this.state.grid;
                     const update = {
                         suggestedGrids: {} as SuggestedGrids,
                     };
+                    if (suggestions) {
+                        suggestions.forEach(
+                            (suggestion: ISuggestion | null) => {
+                                if (suggestion) {
+                                    suggestedGrid = this.applyUpdateToGrid(
+                                        suggestedGrid,
+                                        suggestion.pos,
+                                        suggestion.tile
+                                    );
+                                }
+                            }
+                        );
+                    }
+
                     update.suggestedGrids[repName] = suggestedGrid;
                     this.setState(update);
-                    // console.log("Update:", update);
                     return null;
                 });
         });
