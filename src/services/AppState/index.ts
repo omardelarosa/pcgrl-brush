@@ -6,8 +6,8 @@ import { TILES } from "../../constants/tiles";
 import { TensorFlowService } from "../TensorFlow/index";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
-const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
+export const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
+export const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
 
 type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
@@ -26,7 +26,7 @@ export interface AppState {
     isClicking: boolean;
     suggestedGrids: SuggestedGrids;
     currentRepresentation?: RepresentationName;
-    playerPos: [number, number];
+    playerPos: [number, number] | null;
     pendingSuggestions: Array<ISuggestion>;
 }
 
@@ -109,7 +109,7 @@ export class AppStateService {
                 wide: null,
             },
             pendingSuggestions: [],
-            playerPos: DEFAULT_PLAYER_POS,
+            playerPos: null,
             isClicking: false,
         };
     }
