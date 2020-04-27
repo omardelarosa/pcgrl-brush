@@ -2,6 +2,7 @@ import React from "react";
 import "./styles.css";
 import { ButtonProps, Button } from "../Button";
 import { SizeUpdater } from "../SizeUpdater";
+import { StepSize } from "../StepSize";
 
 export interface ToolbarProps {
     buttons?: ButtonProps[];
@@ -28,6 +29,7 @@ export function Toolbar({
                     gridSize={gridSize}
                 />
             )}
+            <StepSize />
         </div>
     );
 }
