@@ -1,3 +1,29 @@
+.container {
+    display: flex;
+    flex-direction: row;
+}
+
+.cell {
+    margin: 10px;
+    align-self: center;
+    display: flex;
+}
+
+.cursorButton {
+    background-color: #474747;
+    border-radius: 10px;
+    margin: 5px;
+    padding: 10px 20px;
+}
+
+.cursorButton:hover {
+    background-color: #B5B5B5;
+}
+
+.cursorButton.selected {
+    background-color: #B5B5B5;
+}
+
 .slider {
     -webkit-appearance: none;
     appearance: none;
