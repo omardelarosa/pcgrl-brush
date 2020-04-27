@@ -1,13 +1,13 @@
 import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { TilesetButtonProps } from "../../components/TilesetButton";
-import { RepresentationName } from "../TensorFlow";
+import { RepresentationName, ISuggestion } from "../TensorFlow";
 import { TILES } from "../../constants/tiles";
 import { TensorFlowService } from "../TensorFlow/index";
 
 // Number of rows and tiles in stage grid
-const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
-const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
+export const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
+export const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
 
 type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
@@ -26,7 +26,8 @@ export interface AppState {
     isClicking: boolean;
     suggestedGrids: SuggestedGrids;
     currentRepresentation?: RepresentationName;
-    playerPos: [number, number];
+    playerPos: [number, number] | null;
+    pendingSuggestions: Array<ISuggestion>;
 }
 
 export class AppStateService {
@@ -107,7 +108,8 @@ export class AppStateService {
                 turtle: null,
                 wide: null,
             },
-            playerPos: DEFAULT_PLAYER_POS,
+            pendingSuggestions: [],
+            playerPos: null,
             isClicking: false,
         };
     }

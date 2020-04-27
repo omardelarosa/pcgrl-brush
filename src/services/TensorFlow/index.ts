@@ -1,7 +1,8 @@
 // Loading tensorflow ideally only at the app level
 import * as tf from "@tensorflow/tfjs";
-import { Tensor, Tensor2D } from "@tensorflow/tfjs";
+import { Tensor, Tensor2D, Rank } from "@tensorflow/tfjs";
 import { TILES } from "../../constants/tiles";
+import { isEmpty } from "../Utils/index";
 
 // Testing basic functionality of tensorflow using code from:
 // https://www.tensorflow.org/js/guide/tensors_operations
@@ -29,9 +30,13 @@ export interface IGrid {
 
 export type RepresentationName = "narrow" | "turtle" | "wide";
 
+export interface ISuggestion {
+    pos: [number, number];
+    tile: number;
+}
 export interface IPredictionResult {
     suggestedGrid: number[][];
-    targets: number[];
+    suggestions: ISuggestion[] | null;
 }
 
 export const REPRESENTATION_NAMES: RepresentationName[] = [
@@ -151,7 +156,14 @@ export class TensorFlowService {
         );
     }
 
-    public static oneHotEncode2DState(t: Tensor, encodingDim = 5): Tensor {
+    public static oneHotEncode2DState(
+        t: Tensor,
+        encodingDim = 5
+    ): Tensor | null {
+        if (!t) {
+            return null;
+        }
+
         const tArr = t.arraySync() as number[][]; // TODO: not sync?
         const stateExpanded: Tensor = tf.stack(
             tArr.map((row) => {
@@ -242,6 +254,42 @@ export class TensorFlowService {
         return result;
     }
 
+    /**
+     *
+     * Returns an array of 8 neighbors N -> NW clockwise as flat array.  Out of bounds neighbors are replaced with nulls
+     *
+     * @param pos
+     * @param gridSize
+     *
+     * @return neighbors - number[8]
+     */
+    public getNeighbors(
+        pos: [number, number],
+        gridSize: [number, number]
+    ): Array<[number, number] | null> {
+        const radius = 2; // TODO: make neighborhood size configurable
+
+        const neighbors: Array<[number, number] | null> = [];
+        for (let i = -1; i <= radius; i++) {
+            for (let j = -1; j <= radius; j++) {
+                const row = pos[0] + i;
+                const col = pos[1] + j;
+                if (
+                    row >= 0 &&
+                    row < gridSize[0] &&
+                    col >= 0 &&
+                    row < gridSize[1]
+                ) {
+                    neighbors.push([row, col]);
+                } else {
+                    neighbors.push(null);
+                }
+            }
+        }
+
+        return neighbors;
+    }
+
     public async predictAndDraw(
         gridState: number[][],
         gridSize: [number, number],
@@ -251,6 +299,10 @@ export class TensorFlowService {
         // Log the clicked tile coordinates
         if (clickedTileCoords) {
             console.log("clicked tile:", clickedTileCoords);
+            // console.log(
+            //     "neighbors:",
+            //     this.getNeighbors(clickedTileCoords, gridSize)
+            // );
         }
 
         let model: TSModelType | undefined | null = this.models[repName];
@@ -262,63 +314,142 @@ export class TensorFlowService {
             }
         }
 
-        const targets = [];
+        let suggestions: ISuggestion[] | null = null;
 
         // 0. Ignore grids that are too small.
         if (gridSize[0] < 5 || gridSize[1] < 5) {
             return {
                 suggestedGrid: gridState,
-                targets: [],
-            };
+                suggestions, // null
+            } as IPredictionResult;
+        }
+
+        let t2Dstates = [];
+        let neighborhood: Array<[number, number] | null> = [];
+        if (repName !== "wide" && clickedTileCoords) {
+            const centerTile = clickedTileCoords;
+            // const centerTile: [number, number] = [2, 2];
+            neighborhood = this.getNeighbors(centerTile, gridSize);
+            // Create Tensors for each position in neighborhood
+            t2Dstates = await Promise.all(
+                neighborhood.map((pos: [number, number] | null) => {
+                    if (!pos) {
+                        return Promise.resolve(null);
+                    }
+                    return TensorFlowService.transformStateToTensor(
+                        gridState,
+                        gridSize,
+                        repName,
+                        pos || [0, 0] // offset
+                    );
+                })
+            );
+        } else {
+            if (repName !== "wide") {
+                throw new Error(
+                    "Non-wide agent selected without clickedTileCoords!"
+                );
+            }
+            t2Dstates = [
+                await TensorFlowService.transformStateToTensor(
+                    gridState,
+                    gridSize,
+                    repName,
+                    clickedTileCoords?.reverse() || [0, 0] // offset
+                ),
+            ];
         }
 
         // 1. Create 2D tensor from raw state
-        let t2Dstate = await TensorFlowService.transformStateToTensor(
-            gridState,
-            gridSize,
-            repName
-        );
 
         // 1a. Unable to transform state to a tensor
-        if (!t2Dstate) {
+        if (!t2Dstates.length) {
             return {
                 suggestedGrid: gridState,
-                targets: [],
+                suggestions, // null
             };
         }
 
         // 2. Process tensor
-        if (t2Dstate) {
+        if (t2Dstates.length) {
+            console.log("Input: pos: ", clickedTileCoords, "");
+            // Prints the center input
+            t2Dstates[5]?.print();
+            // t2Dstates.forEach((s) => s?.print());
             // 3. Create a OneHotEncoded Grid
-            const stateOneHotEncoded = await TensorFlowService.oneHotEncode2DState(
-                t2Dstate
+            const statesOneHotEncoded: Array<Tensor | null> = await Promise.all(
+                t2Dstates.map((s) => TensorFlowService.oneHotEncode2DState(s!))
             );
             if (model) {
-                const state = stateOneHotEncoded;
-                console.log("Input: ");
-                t2Dstate.print();
-                // 4. Send state through TF model for given representation
-                try {
-                    let preResp: any = model.predict(state.cast("float32"));
-                    // 5. Flatten oneHotEncoded array, use argMax to convert to int
-                    const intResult = tf
-                        .cast(preResp, "int32")
-                        .flatten()
-                        .argMax();
-                    console.log("Raw Response:");
-                    preResp.print();
-                    const arr = await intResult.array();
-                    console.log("Output: ", arr);
-                    const parsedOutput = this.parseModelOutput(arr, repName);
-                    console.log("ParsedOutput: ", parsedOutput);
-                    // TODO: for narrow/turtle, a chain of changes needs to be made here.
+                const parsedOutputs = await Promise.all(
+                    statesOneHotEncoded.map(
+                        async (
+                            state: Tensor | null
+                        ): Promise<IParsedModelOutput | null> => {
+                            if (!state) {
+                                return null;
+                            }
+                            // 4. Send state through TF model for given representation
+                            try {
+                                let preResp: any = model!.predict(
+                                    state.cast("float32")
+                                );
+                                // 5. Flatten oneHotEncoded array, use argMax to convert to int
+                                const intResult = tf
+                                    .cast(preResp, "int32")
+                                    .flatten()
+                                    .argMax();
+                                const arr = await intResult.array();
+                                // console.log("Output: ", arr);
+                                const parsedOutput = this.parseModelOutput(
+                                    arr,
+                                    repName
+                                );
+                                return parsedOutput;
+                                // TODO: for narrow/turtle, a chain of changes needs to be made here.
+                            } catch (err) {
+                                console.warn("Unable to parse state");
+                                console.error(err);
+                                return null;
+                            }
+                        }
+                    )
+                );
+                // console.log("ParsedOutputs", parsedOutputs);
 
-                    // TODO: apply changes and return new state.
-                    targets.push(arr);
-                } catch (err) {
-                    console.warn("Unable to parse state");
-                    console.error(err);
-                }
+                // Convert parsedOutputs to suggestions.
+                parsedOutputs.forEach(
+                    (parsedOutput: IParsedModelOutput | null, idx: number) => {
+                        if (isEmpty(parsedOutput)) {
+                            return;
+                        }
+
+                        // Handle turtle
+                        if (parsedOutput) {
+                            const { tile, pos: suggestedPos } = parsedOutput;
+                            const pos = suggestedPos || neighborhood[idx];
+                            if (pos && tile) {
+                                // Since this might be null, create it
+                                if (!suggestions) {
+                                    suggestions = [];
+                                }
+                                suggestions.push({ pos, tile } as ISuggestion);
+                            }
+                        }
+                    }
+                );
+
+                // Returns an array of suggestions.
+                return {
+                    suggestedGrid: gridState,
+                    suggestions,
+                };
+            } else {
+                console.warn("No model available!");
+                return {
+                    suggestedGrid: gridState,
+                    suggestions: null,
+                };
             }
             // 2a. warning message
         } else {
@@ -327,8 +458,8 @@ export class TensorFlowService {
 
         // NOTE: For now, this just echos the input
         return {
-            suggestedGrid: (await t2Dstate.array()) as number[][],
-            targets,
+            suggestedGrid: gridState,
+            suggestions,
         };
     }
 }

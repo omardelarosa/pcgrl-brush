@@ -3,15 +3,17 @@ import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
 import { SuggestedGrids } from "../../services/AppState";
-import { RepresentationName } from "../../services/TensorFlow";
+import { RepresentationName, ISuggestion } from "../../services/TensorFlow";
 
 interface StageProps {
     grids: SuggestedGrids;
+    pendingSuggestions?: ISuggestion[];
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
     onCellMouseDown?: CellHandler;
+    onGhostGridClick?: CellHandler;
 }
 
 export function Stage({
@@ -21,6 +23,8 @@ export function Stage({
     onGridUnClick = noop,
     onGridClick = noop,
     onCellMouseDown = noop,
+    onGhostGridClick = noop,
+    pendingSuggestions = [],
 }: StageProps) {
     return (
         <div className="stage rounded-container">
@@ -51,12 +55,15 @@ export function Stage({
                                     : undefined
                             }
                             onGridClick={
-                                gridName === "user" ? onGridClick : undefined
+                                gridName === "user"
+                                    ? onGridClick
+                                    : onGhostGridClick
                             }
                             onGridUnClick={
                                 gridName === "user" ? onGridUnClick : undefined
                             }
                             gridLabel={gridName}
+                            pendingSuggestions={pendingSuggestions}
                         />
                     )
             )}

@@ -67,3 +67,11 @@
         background-position-x: -128px;
     }
 }
+
+.user-canvas .grid-cell.grid-cell__highlighted {
+    filter: hue-rotate(300deg); /* this turns the cell green */
+}
+
+.ghost-canvas .grid-cell.grid-cell__highlighted {
+    filter: hue-rotate(90deg); /* this turns the cell green */
+}

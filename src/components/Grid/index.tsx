@@ -1,5 +1,6 @@
 import React from "react";
 import "./styles.css";
+import { ISuggestion } from "../../services/TensorFlow";
 
 export type CellHandler = (r: number, c: number, d: number) => void;
 
@@ -14,6 +15,7 @@ interface GridProps {
     onGridUnClick?: CellHandler;
     className?: string;
     gridLabel?: string;
+    pendingSuggestions?: ISuggestion[];
 }
 interface GridState {}
 
@@ -24,6 +26,7 @@ function GridCell({
     onCellClick = noop,
     onCellMouseOver = noop,
     onCellMouseDown = noop,
+    isHighlighted = false,
 }: {
     row: number;
     col: number;
@@ -31,13 +34,16 @@ function GridCell({
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onCellMouseDown?: CellHandler;
+    isHighlighted?: boolean;
 }) {
     // TODO: add a classname based on the value to make tiling easier
     return (
         <div
-            className={`grid-cell${
-                typeof data !== "undefined" ? ` t${data}` : ""
-            }`}
+            className={[
+                "grid-cell",
+                typeof data !== "undefined" ? `t${data}` : "",
+                isHighlighted ? "grid-cell__highlighted" : "",
+            ].join(" ")}
             onClick={() => onCellClick(row, col, data)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
             onMouseDown={() => onCellMouseDown(row, col, data)}
@@ -45,34 +51,8 @@ function GridCell({
     );
 }
 
-function GridRow({
-    items = [],
-    rowIndex,
-    onCellClick = noop,
-    onCellMouseOver = noop,
-    onCellMouseDown = noop,
-}: {
-    items: number[];
-    rowIndex: number;
-    onCellClick?: CellHandler;
-    onCellMouseOver?: CellHandler;
-    onCellMouseDown?: CellHandler;
-}) {
-    return (
-        <div className="grid-row noselect">
-            {items.map((item, colIdx) => (
-                <GridCell
-                    key={`${rowIndex}_${colIdx}`}
-                    row={rowIndex}
-                    col={colIdx}
-                    data={item}
-                    onCellClick={onCellClick}
-                    onCellMouseOver={onCellMouseOver}
-                    onCellMouseDown={onCellMouseDown}
-                />
-            ))}
-        </div>
-    );
+function GridRow({ children }: { children: JSX.Element[] }) {
+    return <div className="grid-row noselect">{children}</div>;
 }
 
 export class Grid extends React.Component<GridProps, GridState> {
@@ -93,7 +73,16 @@ export class Grid extends React.Component<GridProps, GridState> {
             onCellMouseOver = noop,
             onCellMouseDown = noop,
             gridLabel = "",
+            pendingSuggestions = [],
         } = this.props;
+        const suggestionSet: Record<number, Record<number, boolean>> = {};
+        pendingSuggestions.forEach((suggestion: ISuggestion) => {
+            const [row, col] = suggestion.pos;
+            if (!suggestionSet[row]) {
+                suggestionSet[row] = {};
+            }
+            suggestionSet[row][col] = true;
+        });
         return (
             <div className="grid-wrapper">
                 <div
@@ -103,15 +92,26 @@ export class Grid extends React.Component<GridProps, GridState> {
                 >
                     {/* Iterate over matrix making row elements */}
                     {this.props.matrix &&
-                        this.props.matrix.map((rowItems, idx) => (
-                            <GridRow
-                                items={rowItems}
-                                rowIndex={idx}
-                                key={`row_${idx}`}
-                                onCellClick={onCellClick}
-                                onCellMouseOver={onCellMouseOver}
-                                onCellMouseDown={onCellMouseDown}
-                            />
+                        this.props.matrix.map((rowItems, rowIdx) => (
+                            <GridRow key={`row_${rowIdx}`}>
+                                {rowItems.map((item, colIdx) => {
+                                    return (
+                                        <GridCell
+                                            key={`${rowIdx}_${colIdx}`}
+                                            row={rowIdx}
+                                            col={colIdx}
+                                            data={item}
+                                            isHighlighted={
+                                                suggestionSet[rowIdx] &&
+                                                suggestionSet[rowIdx][colIdx]
+                                            }
+                                            onCellClick={onCellClick}
+                                            onCellMouseOver={onCellMouseOver}
+                                            onCellMouseDown={onCellMouseDown}
+                                        />
+                                    );
+                                })}
+                            </GridRow>
                         ))}
                 </div>
                 {gridLabel && (
