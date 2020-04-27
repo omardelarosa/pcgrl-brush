@@ -251,6 +251,14 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
+    public updateToolRadius = (step: number, radius: number): void => {
+        if (radius !== this.state.toolRadius) {
+            this.setState({
+                toolRadius: radius,
+            });
+        }
+    };
+
     public getSuggestionsFromModel = debounce(
         (
             nextGrid: number[][],
@@ -283,8 +291,8 @@ export class App extends React.Component<AppProps, AppState> {
                         this.state.grid,
                         this.state.gridSize,
                         repName,
-                        clickedTile
-                        // TODO: add offset?
+                        clickedTile,
+                        this.state.toolRadius
                     )
                     .then(({ suggestions }: IPredictionResult) => {
                         console.log(
@@ -361,6 +369,7 @@ export class App extends React.Component<AppProps, AppState> {
                             }))}
                             gridSize={this.state.gridSize}
                             onUpdateGridSize={this.onUpdateGridSize}
+                            onStepSizeChange={this.updateToolRadius}
                             enableResize
                         />
                     }

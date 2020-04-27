@@ -265,11 +265,39 @@ export class TensorFlowService {
      */
     public getNeighbors(
         pos: [number, number],
-        gridSize: [number, number]
+        gridSize: [number, number],
+        userRadius = 2
     ): Array<[number, number] | null> {
-        const radius = 2; // TODO: make neighborhood size configurable
-
+        const radius = userRadius - 1;
         const neighbors: Array<[number, number] | null> = [];
+
+        // 4-neighbors, radius 0, userRadius 1
+        if (radius === 0) {
+            const offsets = [
+                [-1, 0],
+                [0, 1],
+                [1, 0],
+                [0, -1],
+            ];
+            offsets.forEach((offset) => {
+                const [i, j] = offset;
+                const row = pos[0] + i;
+                const col = pos[1] + j;
+                if (
+                    row >= 0 &&
+                    row < gridSize[0] &&
+                    col >= 0 &&
+                    row < gridSize[1]
+                ) {
+                    neighbors.push([row, col]);
+                } else {
+                    neighbors.push(null);
+                }
+            });
+            return neighbors;
+        }
+
+        // 8 or more
         for (let i = -1; i <= radius; i++) {
             for (let j = -1; j <= radius; j++) {
                 const row = pos[0] + i;
@@ -290,20 +318,27 @@ export class TensorFlowService {
         return neighbors;
     }
 
+    /**
+     *
+     * @param gridState - current 2D matrix of grid
+     * @param gridSize - tuple of grid shape
+     * @param repName - name of the current problem representation
+     * @param clickedTileCoords - the last clicked grid coords
+     * @param radius - the radius for narrow/turtle
+     */
     public async predictAndDraw(
         gridState: number[][],
         gridSize: [number, number],
         repName: RepresentationName,
-        clickedTileCoords?: [number, number]
+        clickedTileCoords?: [number, number],
+        radius?: number
     ): Promise<IPredictionResult> {
         // Log the clicked tile coordinates
         if (clickedTileCoords) {
             console.log("clicked tile:", clickedTileCoords);
-            // console.log(
-            //     "neighbors:",
-            //     this.getNeighbors(clickedTileCoords, gridSize)
-            // );
         }
+
+        console.log("radius", radius);
 
         let model: TSModelType | undefined | null = this.models[repName];
         if (!model) {
@@ -329,7 +364,7 @@ export class TensorFlowService {
         if (repName !== "wide" && clickedTileCoords) {
             const centerTile = clickedTileCoords;
             // const centerTile: [number, number] = [2, 2];
-            neighborhood = this.getNeighbors(centerTile, gridSize);
+            neighborhood = this.getNeighbors(centerTile, gridSize, radius);
             // Create Tensors for each position in neighborhood
             t2Dstates = await Promise.all(
                 neighborhood.map((pos: [number, number] | null) => {
@@ -344,6 +379,7 @@ export class TensorFlowService {
                     );
                 })
             );
+            console.log("neighborhood", neighborhood);
         } else {
             if (repName !== "wide") {
                 throw new Error(

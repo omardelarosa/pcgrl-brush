@@ -9,6 +9,7 @@ export interface ToolbarProps {
     gridSize: [number, number];
     enableResize?: boolean;
     onUpdateGridSize: (newSize: [number, number]) => void;
+    onStepSizeChange?: (step: number, radius: number) => void;
 }
 
 export function Toolbar({
@@ -16,6 +17,7 @@ export function Toolbar({
     onUpdateGridSize,
     gridSize,
     enableResize,
+    onStepSizeChange,
 }: ToolbarProps) {
     return (
         <div className="toolbar rounded-container">
@@ -29,7 +31,7 @@ export function Toolbar({
                     gridSize={gridSize}
                 />
             )}
-            <StepSize />
+            <StepSize onEffect={onStepSizeChange} />
         </div>
     );
 }
