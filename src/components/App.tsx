@@ -25,6 +25,10 @@ import {
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
 import { TILES, GHOST_LAYER_DEBOUNCE_AMOUNT_MS } from "../constants/tiles";
+import {
+    DEFAULT_NUM_STEPS,
+    DEFAULT_TOOL_RADIUS,
+} from "../services/AppState/index";
 
 interface AppProps {}
 
@@ -59,6 +63,8 @@ export class App extends React.Component<AppProps, AppState> {
             );
             this.setState({
                 grid: updatedGrid,
+                numSteps: DEFAULT_NUM_STEPS,
+                toolRadius: DEFAULT_TOOL_RADIUS,
             });
             // 3. Update ghostLayer
             this.updateGhostLayer(updatedGrid, this.state.gridSize, "narrow");
@@ -257,78 +263,108 @@ export class App extends React.Component<AppProps, AppState> {
                 toolRadius: radius,
             });
         }
+
+        if (step !== this.state.numSteps) {
+            this.setState({
+                numSteps: step,
+            });
+        }
     };
 
-    public getSuggestionsFromModel = debounce(
-        (
-            nextGrid: number[][],
-            nextSize: [number, number],
-            repName?: RepresentationName,
-            clickedTile?: [number, number]
-        ) => {
-            // Skip TF updates on 0 grid
-            if (!nextSize[0] || !nextSize[1]) {
-                return;
-            }
+    public getSuggestionsFromModel = debounce((
+        nextGrid: number[][],
+        nextSize: [number, number],
+        repName?: RepresentationName,
+        clickedTile = DEFAULT_PLAYER_POS // use center tile as default on load
+    ) => {
+        // Skip TF updates on 0 grid
+        if (!nextSize[0] || !nextSize[1]) {
+            return;
+        }
 
-            const currentRepName = repName || this.state.currentRepresentation;
+        const currentRepName = repName || this.state.currentRepresentation;
 
-            REPRESENTATION_NAMES.forEach((repName: RepresentationName) => {
-                // NOTE: this is very slow if all representations are processed each time.
-                // Only process current representation.
+        if (!currentRepName) {
+            return;
+        }
 
-                if (repName !== currentRepName) {
-                    return null;
-                }
+        console.log(`Processing state using ${currentRepName} model`);
+        const fn = async (steps: number) => {
+            console.log("NumSteps: ", steps);
+            // Convert state to Tensor
+            const suggestionSet: Record<number, Record<number, number>> = {};
+            let suggestedGrid = this.state.grid;
 
-                if (repName !== "wide" && !clickedTile) {
-                    return null;
-                }
-                console.log(`Processing state using ${repName} model`);
-                // Convert state to Tensor
-                this.tfService
-                    .predictAndDraw(
-                        this.state.grid,
-                        this.state.gridSize,
-                        repName,
-                        clickedTile,
-                        this.state.toolRadius
-                    )
-                    .then(({ suggestions }: IPredictionResult) => {
-                        console.log(
-                            "Suggestions received from model:",
-                            suggestions
-                        );
-                        let suggestedGrid = this.state.grid;
-                        const suggestedGrids = {} as SuggestedGrids;
-                        if (suggestions) {
-                            suggestions.forEach(
-                                (suggestion: ISuggestion | null) => {
-                                    if (suggestion) {
-                                        suggestedGrid = this.applyUpdateToGrid(
-                                            suggestedGrid,
-                                            suggestion.pos,
-                                            suggestion.tile
-                                        );
-                                    }
-                                }
+            // Keep generating new grids based on suggestions
+            for (let i = 0; i < steps; i++) {
+                const {
+                    suggestions,
+                }: IPredictionResult = await this.tfService.predictAndDraw(
+                    this.state.grid,
+                    this.state.gridSize,
+                    currentRepName,
+                    clickedTile,
+                    this.state.toolRadius
+                );
+                console.log("step: ", i, " suggestions: ", suggestions);
+                if (suggestions) {
+                    for (let j = 0; j < suggestions.length; j++) {
+                        const suggestion: ISuggestion | null = suggestions[j];
+                        if (suggestion) {
+                            suggestedGrid = this.applyUpdateToGrid(
+                                suggestedGrid,
+                                suggestion.pos,
+                                suggestion.tile
                             );
                         }
+                    }
+                    // suggestionsMatrix.push(suggestions);
+                    // lastSuggestions = suggestions; // TODO: combine suggestions
 
-                        // Save the suggestion in the state update
-                        suggestedGrids[repName] = suggestedGrid;
-
-                        this.setState({
-                            suggestedGrids,
-                            // Add an array of pending suggestions to state
-                            pendingSuggestions: suggestions || [],
-                        });
-                        return null;
+                    // Add latest suggestions
+                    suggestions.forEach((suggestion: ISuggestion) => {
+                        const [row, col] = suggestion.pos;
+                        if (!suggestionSet[row]) {
+                            suggestionSet[row] = {};
+                        }
+                        suggestionSet[row][col] = suggestion.tile;
                     });
+                } else {
+                    // When there are no suggestions, terminate loop
+                    break;
+                }
+            }
+
+            // Save the suggestion in the state update
+            const suggestedGrids = {} as SuggestedGrids;
+            suggestedGrids[currentRepName] = suggestedGrid;
+
+            let pendingSuggestions = null;
+            // TODO: flatten suggestions set
+            for (let row in suggestionSet) {
+                const o = suggestionSet[row];
+                for (let col in o) {
+                    const suggestion: ISuggestion = {
+                        pos: [Number(row), Number(col)],
+                        tile: o[col],
+                    };
+                    if (!pendingSuggestions) {
+                        pendingSuggestions = [];
+                    }
+                    pendingSuggestions.push(suggestion);
+                }
+            }
+
+            this.setState({
+                suggestedGrids,
+                // Add an array of pending suggestions to state
+                pendingSuggestions: pendingSuggestions || [],
             });
-        },
-        GHOST_LAYER_DEBOUNCE_AMOUNT_MS
-    );
+        };
+
+        // Invoke async anon function
+        fn(this.state.numSteps);
+    }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
     public updateGhostLayer = (
         nextGrid: number[][],

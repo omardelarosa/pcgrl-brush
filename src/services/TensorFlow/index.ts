@@ -432,7 +432,7 @@ export class TensorFlowService {
                                 );
                                 // 5. Flatten oneHotEncoded array, use argMax to convert to int
                                 const intResult = tf
-                                    .cast(preResp, "int32")
+                                    .cast(preResp, "float32")
                                     .flatten()
                                     .argMax();
                                 const arr = await intResult.array();

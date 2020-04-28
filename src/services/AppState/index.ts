@@ -9,6 +9,7 @@ import { TensorFlowService } from "../TensorFlow/index";
 export const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
 export const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
 export const DEFAULT_TOOL_RADIUS = 2;
+export const DEFAULT_NUM_STEPS = 1;
 
 type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
@@ -30,6 +31,7 @@ export interface AppState {
     playerPos: [number, number] | null;
     pendingSuggestions: Array<ISuggestion>;
     toolRadius: number;
+    numSteps: number;
 }
 
 export class AppStateService {
@@ -114,6 +116,7 @@ export class AppStateService {
             playerPos: null,
             isClicking: false,
             toolRadius: DEFAULT_TOOL_RADIUS,
+            numSteps: DEFAULT_NUM_STEPS,
         };
     }
 }
