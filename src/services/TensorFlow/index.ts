@@ -333,12 +333,12 @@ export class TensorFlowService {
         clickedTileCoords?: [number, number],
         radius?: number
     ): Promise<IPredictionResult> {
-        // Log the clicked tile coordinates
-        if (clickedTileCoords) {
-            console.log("clicked tile:", clickedTileCoords);
-        }
+        // // Log the clicked tile coordinates
+        // if (clickedTileCoords) {
+        //     console.log("clicked tile:", clickedTileCoords);
+        // }
 
-        console.log("radius", radius);
+        // console.log("radius", radius);
 
         let model: TSModelType | undefined | null = this.models[repName];
         if (!model) {
@@ -379,7 +379,8 @@ export class TensorFlowService {
                     );
                 })
             );
-            console.log("neighborhood", neighborhood);
+            // // uncomment to debug
+            // console.log("neighborhood", neighborhood);
         } else {
             if (repName !== "wide") {
                 throw new Error(

@@ -288,13 +288,15 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        console.log(`Processing state using ${currentRepName} model`);
+        // console.log(`Processing state using ${currentRepName} model`);
+
         const fn = async (steps: number) => {
-            console.log("NumSteps: ", steps);
-            // Convert state to Tensor
+            // // uncomment to debug
+            // console.log("NumSteps: ", steps);
+
+            // Keep track of all mutations
             const suggestionSet: Record<number, Record<number, number>> = {};
             let suggestedGrid = this.state.grid;
-
             // Keep generating new grids based on suggestions
             for (let i = 0; i < steps; i++) {
                 const {
@@ -306,7 +308,8 @@ export class App extends React.Component<AppProps, AppState> {
                     clickedTile,
                     this.state.toolRadius
                 );
-                console.log("step: ", i, " suggestions: ", suggestions);
+                // For debugging -- uncomment
+                // console.log("step: ", i, " suggestions: ", suggestions);
                 if (suggestions) {
                     for (let j = 0; j < suggestions.length; j++) {
                         const suggestion: ISuggestion | null = suggestions[j];
@@ -318,8 +321,6 @@ export class App extends React.Component<AppProps, AppState> {
                             );
                         }
                     }
-                    // suggestionsMatrix.push(suggestions);
-                    // lastSuggestions = suggestions; // TODO: combine suggestions
 
                     // Add latest suggestions
                     suggestions.forEach((suggestion: ISuggestion) => {
@@ -340,7 +341,7 @@ export class App extends React.Component<AppProps, AppState> {
             suggestedGrids[currentRepName] = suggestedGrid;
 
             let pendingSuggestions = null;
-            // TODO: flatten suggestions set
+            // Aggregate all the suggestions from the loop above.
             for (let row in suggestionSet) {
                 const o = suggestionSet[row];
                 for (let col in o) {
@@ -355,6 +356,7 @@ export class App extends React.Component<AppProps, AppState> {
                 }
             }
 
+            // Update the UI state based on the suggested grids, etc.
             this.setState({
                 suggestedGrids,
                 // Add an array of pending suggestions to state
@@ -362,7 +364,7 @@ export class App extends React.Component<AppProps, AppState> {
             });
         };
 
-        // Invoke async anon function
+        // Invoke async anon function -- a trick to do an async/await loop
         fn(this.state.numSteps);
     }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
