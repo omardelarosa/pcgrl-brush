@@ -1,5 +1,5 @@
 import React from "react";
-import { debounce, Cancelable } from "lodash";
+import { debounce } from "lodash";
 import "./App.css";
 import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
@@ -10,7 +10,6 @@ import { Logo } from "./Logo";
 
 import {
     TensorFlowService,
-    REPRESENTATION_NAMES,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
     IPredictionResult,
@@ -29,6 +28,8 @@ import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
 } from "../services/AppState/index";
+import _ from "lodash";
+import { diffGrids } from "../services/Utils/index";
 
 interface AppProps {}
 
@@ -296,71 +297,124 @@ export class App extends React.Component<AppProps, AppState> {
 
             // Keep track of all mutations
             const suggestionSet: Record<number, Record<number, number>> = {};
-            let suggestedGrid = this.state.grid;
-            // Keep generating new grids based on suggestions
-            for (let i = 0; i < steps; i++) {
-                const {
-                    suggestions,
-                }: IPredictionResult = await this.tfService.predictAndDraw(
-                    this.state.grid,
-                    this.state.gridSize,
-                    currentRepName,
-                    clickedTile,
-                    this.state.toolRadius
-                );
-                // For debugging -- uncomment
-                // console.log("step: ", i, " suggestions: ", suggestions);
-                if (suggestions) {
-                    for (let j = 0; j < suggestions.length; j++) {
-                        const suggestion: ISuggestion | null = suggestions[j];
-                        if (suggestion) {
-                            suggestedGrid = this.applyUpdateToGrid(
-                                suggestedGrid,
-                                suggestion.pos,
-                                suggestion.tile
-                            );
-                        }
-                    }
+            const suggestedGridStack = [this.state.grid];
+            let neighborhoodPositions = this.tfService.getNeighbors(
+                clickedTile,
+                this.state.gridSize,
+                this.state.toolRadius
+            );
+            console.log("neighbors: ", neighborhoodPositions);
+            // For each position in neighborhood...
+            for (let p = 0; p < neighborhoodPositions.length; p++) {
+                const pos = neighborhoodPositions[p];
+                const suggestedGrid = suggestedGridStack[p];
+                if (!suggestedGrid) {
+                    throw new Error("Missing grid!");
+                }
+                // console.log("pos: ", pos);
+                // Skip invalid positions
+                if (pos === null) {
+                    suggestedGridStack.push(suggestedGrid);
+                    continue;
+                }
+                // console.log("pos: ", pos);
+                // Keep generating new grids based on suggestions
+                for (let i = 0; i < steps; i++) {
+                    const {
+                        suggestions,
+                    }: IPredictionResult = await this.tfService.predictAndDraw(
+                        suggestedGrid,
+                        this.state.gridSize,
+                        currentRepName,
+                        pos,
+                        this.state.toolRadius
+                    );
+                    // For debugging -- uncomment
+                    console.log(
+                        "step: ",
+                        p,
+                        i,
+                        " suggestions: ",
+                        suggestions,
+                        "pos: ",
+                        pos
+                    );
+                    if (suggestions) {
+                        // const numSuggestions = suggestions.length;
+                        const numSuggestions = 1;
+                        for (let j = 0; j < numSuggestions; j++) {
+                            const suggestion: ISuggestion | null =
+                                suggestions[j];
+                            if (suggestion) {
+                                const nextSuggestedGrid = this.applyUpdateToGrid(
+                                    suggestedGrid,
+                                    suggestion.pos,
+                                    // pos, // use current neighborhood pos
+                                    suggestion.tile
+                                );
 
-                    // Add latest suggestions
-                    suggestions.forEach((suggestion: ISuggestion) => {
-                        const [row, col] = suggestion.pos;
-                        if (!suggestionSet[row]) {
-                            suggestionSet[row] = {};
+                                const direction = suggestion.direction;
+                                // When a direction is given...
+                                if (direction) {
+                                    // recompute neighbors by shifting in direction
+                                    const updatedNeighborhoodPositions = this.tfService.getNeighbors(
+                                        [
+                                            clickedTile[0] + direction[0],
+                                            clickedTile[1] + direction[1],
+                                        ],
+                                        this.state.gridSize,
+                                        this.state.toolRadius
+                                    );
+
+                                    // Change neighborhood positions to match
+                                    updatedNeighborhoodPositions.forEach(
+                                        (nextPos, idx) => {
+                                            neighborhoodPositions[
+                                                idx
+                                            ] = nextPos;
+                                        }
+                                    );
+                                }
+
+                                suggestedGridStack.push(nextSuggestedGrid);
+                            }
                         }
-                        suggestionSet[row][col] = suggestion.tile;
-                    });
-                } else {
-                    // When there are no suggestions, terminate loop
-                    break;
+                    } else {
+                        // When there are no suggestions, terminate loop
+                        break;
+                    }
                 }
             }
 
             // Save the suggestion in the state update
             const suggestedGrids = {} as SuggestedGrids;
-            suggestedGrids[currentRepName] = suggestedGrid;
-
-            let pendingSuggestions = null;
-            // Aggregate all the suggestions from the loop above.
-            for (let row in suggestionSet) {
-                const o = suggestionSet[row];
-                for (let col in o) {
+            suggestedGrids[currentRepName] = _.last(suggestedGridStack);
+            let nextGrid = suggestedGrids[currentRepName];
+            const pendingSuggestions: ISuggestion[] = [];
+            // Aggregate all the suggestions from the loop above by diffing
+            // current grid and last suggested grid.
+            if (nextGrid) {
+                const diffs = diffGrids(
+                    this.state.grid,
+                    nextGrid,
+                    this.state.gridSize
+                );
+                diffs.forEach((diff) => {
                     const suggestion: ISuggestion = {
-                        pos: [Number(row), Number(col)],
-                        tile: o[col],
+                        pos: diff.pos,
+                        tile: diff.b,
                     };
-                    if (!pendingSuggestions) {
-                        pendingSuggestions = [];
-                    }
                     pendingSuggestions.push(suggestion);
-                }
+                });
             }
+
+            console.log("pending_suggestions:", pendingSuggestions);
 
             // Update the UI state based on the suggested grids, etc.
             this.setState({
                 suggestedGrids,
                 // Add an array of pending suggestions to state
-                pendingSuggestions: pendingSuggestions || [],
+                pendingSuggestions: pendingSuggestions,
             });
         };
 
