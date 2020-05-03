@@ -1,8 +1,14 @@
 import React from "react";
 import "./styles.css";
 import { ISuggestion } from "../../services/TensorFlow";
+import { RepresentationName } from "../../services/TensorFlow/index";
 
-export type CellHandler = (r: number, c: number, d: number) => void;
+export type CellHandler = (
+    r: number,
+    c: number,
+    d: number,
+    l?: RepresentationName
+) => void;
 
 export const noop = () => undefined;
 
@@ -14,7 +20,7 @@ interface GridProps {
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
     className?: string;
-    gridLabel?: string;
+    gridLabel?: RepresentationName;
     pendingSuggestions?: ISuggestion[];
 }
 interface GridState {}
@@ -27,6 +33,7 @@ function GridCell({
     onCellMouseOver = noop,
     onCellMouseDown = noop,
     isHighlighted = false,
+    gridLabel,
 }: {
     row: number;
     col: number;
@@ -35,6 +42,7 @@ function GridCell({
     onCellMouseOver?: CellHandler;
     onCellMouseDown?: CellHandler;
     isHighlighted?: boolean;
+    gridLabel?: RepresentationName;
 }) {
     // TODO: add a classname based on the value to make tiling easier
     return (
@@ -44,7 +52,7 @@ function GridCell({
                 typeof data !== "undefined" ? `t${data}` : "",
                 isHighlighted ? "grid-cell__highlighted" : "",
             ].join(" ")}
-            onClick={() => onCellClick(row, col, data)}
+            onClick={() => onCellClick(row, col, data, gridLabel)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
             onMouseDown={() => onCellMouseDown(row, col, data)}
         ></div>
@@ -72,7 +80,7 @@ export class Grid extends React.Component<GridProps, GridState> {
             onCellClick = noop,
             onCellMouseOver = noop,
             onCellMouseDown = noop,
-            gridLabel = "",
+            gridLabel,
             pendingSuggestions = [],
         } = this.props;
         const suggestionSet: Record<number, Record<number, boolean>> = {};
@@ -87,8 +95,8 @@ export class Grid extends React.Component<GridProps, GridState> {
             <div className="grid-wrapper">
                 <div
                     className={"grid " + this.props.className}
-                    onMouseDown={() => onGridClick(-1, -1, -1)}
-                    onMouseUp={() => onGridUnClick(-1, -1, -1)}
+                    onMouseDown={() => onGridClick(-1, -1, -1, gridLabel)}
+                    onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
                     {this.props.matrix &&
@@ -108,6 +116,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                                             onCellClick={onCellClick}
                                             onCellMouseOver={onCellMouseOver}
                                             onCellMouseDown={onCellMouseDown}
+                                            gridLabel={gridLabel || undefined}
                                         />
                                     );
                                 })}

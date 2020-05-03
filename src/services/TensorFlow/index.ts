@@ -238,7 +238,6 @@ export class TensorFlowService {
             }
             // 2. Turtle
             else if (repName === "turtle") {
-                console.log(repName);
                 if (output <= 3) {
                     result.direction = output;
                 } else {
@@ -421,7 +420,7 @@ export class TensorFlowService {
                     // 5. Flatten oneHotEncoded array, use argMax to convert to int
                     const probDist = tf.cast(preResp, "float32").flatten();
                     const probDistArr = await probDist.array();
-                    const arr = argSort(probDistArr);
+                    const arr = argSort(probDistArr, true);
                     // console.log("Unsorted: ", probDistArr);
                     // console.log("Output: ", arr);
                     parsedOutputs = this.parseModelOutput(arr, repName);
@@ -464,9 +463,9 @@ export class TensorFlowService {
                 // }
 
                 // Take only first suggestion
-                if (repName !== "wide" && suggestions) {
-                    suggestions = [suggestions[0]];
-                }
+                // if (repName !== "wide" && suggestions) {
+                //     suggestions = [suggestions[0]];
+                // }
 
                 // Returns an array of suggestions.
                 return {

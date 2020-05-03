@@ -19,22 +19,31 @@ import {
     AppStateService,
     AppState,
     SuggestedGrids,
+    SuggestionsByType,
     DEFAULT_PLAYER_POS,
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
-import { TILES, GHOST_LAYER_DEBOUNCE_AMOUNT_MS } from "../constants/tiles";
+import { TILES, CENTER_TILE_POS } from "../constants/tiles";
+import {
+    GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
+    NUMBER_OF_SUGGESTIONS_IN_WIDE,
+} from "../constants";
 import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
 } from "../services/AppState/index";
 import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
+import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
 
 interface AppProps {}
 
-// Temporarily aliasing this type until distinct button types are made
-
+interface IModelResult {
+    grid: number[][] | null;
+    repName: RepresentationName;
+    pendingSuggestions: ISuggestion[];
+}
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
 
@@ -239,22 +248,46 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public acceptGhostSuggestions = (): void => {
-        console.log("Accepting Ghost suggestion");
+    public acceptGhostSuggestions = (
+        r: number,
+        c: number,
+        d: number,
+        repName?: RepresentationName
+    ): void => {
         // 1. Find suggestedGrid
-        if (!this.state.currentRepresentation) {
+        if (!repName) {
+            console.log("Unable to find ghost grid with name: ", repName);
             return;
         }
-        const suggestedGrid = this.state.suggestedGrids[
-            this.state.currentRepresentation
-        ];
+
+        console.log("Accepting Ghost suggestion from: ", repName);
+        const suggestedGrid = this.state.suggestedGrids[repName];
+
+        // 2. Apply changes from the corresponding grid.
         if (suggestedGrid) {
             const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
+            const pendingSuggestions: SuggestionsByType = {};
+            // if (repName) {
+            //     pendingSuggestions[repName] = null;
+            // }
+            const suggestedGrids = {} as SuggestedGrids;
+            REPRESENTATION_NAMES.forEach((repName) => {
+                suggestedGrids[repName] = suggestedGrid;
+            });
             this.setState({
                 grid: suggestedGrid,
                 playerPos: nextPlayerPos ? nextPlayerPos : this.state.playerPos,
-                pendingSuggestions: [],
+                pendingSuggestions,
+                suggestedGrids,
             });
+
+            // 3. Get more updates from model to support chaining
+            this.getSuggestionsFromModel(
+                suggestedGrid,
+                this.state.gridSize,
+                undefined,
+                CENTER_TILE_POS
+            );
         }
     };
 
@@ -289,23 +322,43 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
+        const currentGrid = nextGrid;
+
         // console.log(`Processing state using ${currentRepName} model`);
 
-        const fn = async (steps: number) => {
+        const fn = async (
+            steps: number,
+            repName: RepresentationName
+        ): Promise<IModelResult> => {
+            // console.log("START: repName: ", repName);
             // // uncomment to debug
-            // console.log("NumSteps: ", steps);
-
             // Keep track of all mutations
-            const suggestionSet: Record<number, Record<number, number>> = {};
-            const suggestedGridStack = [this.state.grid];
-            let neighborhoodPositions = this.tfService.getNeighbors(
-                clickedTile,
-                this.state.gridSize,
-                this.state.toolRadius
-            );
-            console.log("neighbors: ", neighborhoodPositions);
+            const suggestedGridStack = [currentGrid];
+
+            // This doesn't matter for wide.
+            let neighborhoodPositions = [];
+
+            // Use relative position for non-wide
+            if (repName !== "wide") {
+                neighborhoodPositions = this.tfService.getNeighbors(
+                    clickedTile,
+                    this.state.gridSize,
+                    this.state.toolRadius
+                );
+            } else {
+                // Just repeat clicked position over and over for wide.
+                for (let i = 0; i < steps; i++) {
+                    neighborhoodPositions.push(clickedTile);
+                }
+            }
+
+            // console.log("neighbors: ", neighborhoodPositions);
+            // For
+            // const iters = repName !== 'wide' ? neighborhoodPositions.length : NUMBER_OF_SUGGESTIONS_IN_WIDE;
+            const iters = neighborhoodPositions.length;
+
             // For each position in neighborhood...
-            for (let p = 0; p < neighborhoodPositions.length; p++) {
+            for (let p = 0; p < iters; p++) {
                 const pos = neighborhoodPositions[p];
                 const suggestedGrid = suggestedGridStack[p];
                 if (!suggestedGrid) {
@@ -317,34 +370,33 @@ export class App extends React.Component<AppProps, AppState> {
                     suggestedGridStack.push(suggestedGrid);
                     continue;
                 }
+
                 // console.log("pos: ", pos);
                 // Keep generating new grids based on suggestions
+                const suggestionsApplied: ISuggestion[] = [];
                 for (let i = 0; i < steps; i++) {
                     const {
                         suggestions,
                     }: IPredictionResult = await this.tfService.predictAndDraw(
                         suggestedGrid,
                         this.state.gridSize,
-                        currentRepName,
+                        repName,
                         pos,
                         this.state.toolRadius
                     );
                     // For debugging -- uncomment
-                    console.log(
-                        "step: ",
-                        p,
-                        i,
-                        " suggestions: ",
-                        suggestions,
-                        "pos: ",
-                        pos
-                    );
+                    // console.log("step: ", p, i, "pos: ", pos);
                     if (suggestions) {
                         // const numSuggestions = suggestions.length;
-                        const numSuggestions = 1;
+                        let numSuggestions = 1;
+                        // When using wide, steps means the number of tiles to consider
+                        if (repName === "wide") {
+                            numSuggestions = steps;
+                        }
                         for (let j = 0; j < numSuggestions; j++) {
                             const suggestion: ISuggestion | null =
                                 suggestions[j];
+                            suggestionsApplied.push(suggestion);
                             if (suggestion) {
                                 const nextSuggestedGrid = this.applyUpdateToGrid(
                                     suggestedGrid,
@@ -384,18 +436,20 @@ export class App extends React.Component<AppProps, AppState> {
                         break;
                     }
                 }
+                // console.log("suggestions_applied:", suggestionsApplied);
             }
 
             // Save the suggestion in the state update
-            const suggestedGrids = {} as SuggestedGrids;
-            suggestedGrids[currentRepName] = _.last(suggestedGridStack);
-            let nextGrid = suggestedGrids[currentRepName];
+            const nextGrid: number[][] | null =
+                _.last(suggestedGridStack) || null;
+            // console.log("END: repName: ", repName);
+            // console.log("SuggestedGridStack:", suggestedGridStack);
             const pendingSuggestions: ISuggestion[] = [];
             // Aggregate all the suggestions from the loop above by diffing
             // current grid and last suggested grid.
             if (nextGrid) {
                 const diffs = diffGrids(
-                    this.state.grid,
+                    currentGrid,
                     nextGrid,
                     this.state.gridSize
                 );
@@ -408,18 +462,37 @@ export class App extends React.Component<AppProps, AppState> {
                 });
             }
 
-            console.log("pending_suggestions:", pendingSuggestions);
+            // console.log("pending_suggestions:", pendingSuggestions);
 
+            return {
+                grid: nextGrid,
+                repName,
+                pendingSuggestions,
+            };
+        };
+
+        // Invoke async anon function -- a trick to do an async/await loop
+        Promise.all(
+            REPRESENTATION_NAMES.map((repName) =>
+                fn(this.state.numSteps, repName)
+            )
+        ).then((results: IModelResult[]) => {
+            // Save the suggestion in the state update
+            const suggestedGrids = {} as SuggestedGrids;
+            const pendingSuggestions = {} as SuggestionsByType;
+            results.forEach((result) => {
+                suggestedGrids[result.repName] = result.grid;
+                pendingSuggestions[result.repName] =
+                    result.pendingSuggestions || [];
+            });
+            // console.log("pending_suggestions:", pendingSuggestions);
             // Update the UI state based on the suggested grids, etc.
             this.setState({
                 suggestedGrids,
                 // Add an array of pending suggestions to state
-                pendingSuggestions: pendingSuggestions,
+                pendingSuggestions,
             });
-        };
-
-        // Invoke async anon function -- a trick to do an async/await loop
-        fn(this.state.numSteps);
+        });
     }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
     public updateGhostLayer = (

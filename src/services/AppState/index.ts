@@ -15,6 +15,9 @@ type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
     Record<RepresentationName | "user", number[][] | null>
 >;
+export type SuggestionsByType = Partial<
+    Record<RepresentationName | "user", ISuggestion[] | null>
+>;
 
 export interface AppState {
     sidebarButtons: ButtonProps[];
@@ -29,7 +32,7 @@ export interface AppState {
     suggestedGrids: SuggestedGrids;
     currentRepresentation?: RepresentationName;
     playerPos: [number, number] | null;
-    pendingSuggestions: Array<ISuggestion>;
+    pendingSuggestions: SuggestionsByType | null;
     toolRadius: number;
     numSteps: number;
 }
@@ -108,11 +111,16 @@ export class AppStateService {
                 .grid,
             // AI Suggested grids
             suggestedGrids: {
-                narrow: null,
-                turtle: null,
-                wide: null,
+                narrow: TensorFlowService.createGameGrid(
+                    DEFAULT_STAGE_GRID_SIZE
+                ).grid,
+                turtle: TensorFlowService.createGameGrid(
+                    DEFAULT_STAGE_GRID_SIZE
+                ).grid,
+                wide: TensorFlowService.createGameGrid(DEFAULT_STAGE_GRID_SIZE)
+                    .grid,
             },
-            pendingSuggestions: [],
+            pendingSuggestions: null,
             playerPos: null,
             isClicking: false,
             toolRadius: DEFAULT_TOOL_RADIUS,
