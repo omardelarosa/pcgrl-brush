@@ -2,6 +2,7 @@ import React from "react";
 import "./styles.css";
 import { ISuggestion } from "../../services/TensorFlow";
 import { RepresentationName } from "../../services/TensorFlow/index";
+import { BOARD_SIZE_PX } from "../../constants";
 
 export type CellHandler = (
     r: number,
@@ -29,6 +30,7 @@ function GridCell({
     row,
     col,
     data,
+    size,
     onCellClick = noop,
     onCellMouseOver = noop,
     onCellMouseDown = noop,
@@ -38,6 +40,7 @@ function GridCell({
     row: number;
     col: number;
     data: number;
+    size: number[];
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onCellMouseDown?: CellHandler;
@@ -52,6 +55,10 @@ function GridCell({
                 typeof data !== "undefined" ? `t${data}` : "",
                 isHighlighted ? "grid-cell__highlighted" : "",
             ].join(" ")}
+            /* style={{
+                width: size[0],
+                height: size[1],
+            }} */
             onClick={() => onCellClick(row, col, data, gridLabel)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
             onMouseDown={() => onCellMouseDown(row, col, data)}
@@ -91,6 +98,14 @@ export class Grid extends React.Component<GridProps, GridState> {
             }
             suggestionSet[row][col] = true;
         });
+        const matrix = this.props.matrix;
+        let cellSize = [0, 0];
+        if (matrix) {
+            const cellPx = Math.round(BOARD_SIZE_PX / matrix.length / 2);
+            cellSize = [cellPx, cellPx];
+            // console.log("matrix", matrix.length, cellPx, BOARD_SIZE_PX);
+        }
+
         return (
             <div className="grid-wrapper">
                 <div
@@ -99,8 +114,8 @@ export class Grid extends React.Component<GridProps, GridState> {
                     onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {this.props.matrix &&
-                        this.props.matrix.map((rowItems, rowIdx) => (
+                    {matrix &&
+                        matrix.map((rowItems, rowIdx) => (
                             <GridRow key={`row_${rowIdx}`}>
                                 {rowItems.map((item, colIdx) => {
                                     return (
@@ -109,6 +124,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                                             row={rowIdx}
                                             col={colIdx}
                                             data={item}
+                                            size={cellSize}
                                             isHighlighted={
                                                 suggestionSet[rowIdx] &&
                                                 suggestionSet[rowIdx][colIdx]

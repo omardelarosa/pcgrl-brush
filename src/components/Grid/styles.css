@@ -8,7 +8,9 @@
 }
 
 .grid-wrapper {
-    margin: 24px;
+    /* margin: 24px; */
+    padding: 0;
+    flex-direction: row;
 }
 
 .grid-cell:first-child {
@@ -44,7 +46,16 @@
     /* This is a basic sprite mapping */
     background-image: url(../../assets/images/tiles.png);
     background-size: 512px 512px;
+    /* background-size: 800%; */
     image-rendering: pixelated;
+}
+
+.classic .grid-row .grid-cell {
+    background-image: url(../../assets/images/tiles-classic.png);
+}
+
+.dungeon .grid-row .grid-cell {
+    background-image: url(../../assets/images/tiles-dungeon.png);
 }
 
 .grid-cell.t0 {

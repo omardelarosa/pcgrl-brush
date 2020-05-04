@@ -35,6 +35,7 @@ export interface AppState {
     pendingSuggestions: SuggestionsByType | null;
     toolRadius: number;
     numSteps: number;
+    tileset?: string;
 }
 
 export class AppStateService {

@@ -14,6 +14,7 @@ interface StageProps {
     onGridUnClick?: CellHandler;
     onCellMouseDown?: CellHandler;
     onGhostGridClick?: CellHandler;
+    vertical?: boolean;
 }
 
 export function Stage({
@@ -25,9 +26,16 @@ export function Stage({
     onCellMouseDown = noop,
     onGhostGridClick = noop,
     pendingSuggestions = {},
+    vertical = false,
 }: StageProps) {
     return (
-        <div className="stage rounded-container">
+        <div
+            className={[
+                "stage",
+                "rounded-container",
+                vertical ? "vertical-arrangement" : "",
+            ].join(" ")}
+        >
             {Object.keys(grids).map(
                 (gridName: RepresentationName | string, idx) =>
                     grids[gridName as RepresentationName] && (

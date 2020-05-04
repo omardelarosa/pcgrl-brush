@@ -1,9 +1,21 @@
 .stage {
-    flex: 1;
+    /* flex: 1; */
+    flex: 3 3;
     display: flex;
     overflow-y: scroll;
     justify-content: space-around;
     flex-wrap: wrap;
+    max-width: 40vw;
+    padding: 12px;
+}
+
+.stage.vertical-arrangement {
+    flex-direction: column;
+    flex: 1 1;
+}
+
+.stage.vertical-arrangement .grid-row {
+    flex: 0 0;
 }
 
 .stage .user-canvas {

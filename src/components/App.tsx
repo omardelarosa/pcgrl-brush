@@ -28,6 +28,7 @@ import { TILES, CENTER_TILE_POS } from "../constants/tiles";
 import {
     GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
     NUMBER_OF_SUGGESTIONS_IN_WIDE,
+    SUPPORTED_TILESETS,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
@@ -362,9 +363,10 @@ export class App extends React.Component<AppProps, AppState> {
                 const pos = neighborhoodPositions[p];
                 const suggestedGrid = suggestedGridStack[p];
                 if (!suggestedGrid) {
+                    console.log("grids", suggestedGridStack, p);
                     throw new Error("Missing grid!");
                 }
-                // console.log("pos: ", pos);
+
                 // Skip invalid positions
                 if (pos === null) {
                     suggestedGridStack.push(suggestedGrid);
@@ -507,9 +509,15 @@ export class App extends React.Component<AppProps, AppState> {
         this.getSuggestionsFromModel(nextGrid, nextSize, repName, clickedTile);
     };
 
+    public updateTileSet = (t: string) => {
+        this.setState({
+            tileset: t,
+        });
+    };
+
     public render() {
         return (
-            <div className="App">
+            <div className={["App", this.state.tileset || ""].join(" ")}>
                 <Layout
                     logo={<Logo />}
                     sidebar={
@@ -538,11 +546,10 @@ export class App extends React.Component<AppProps, AppState> {
                             enableResize
                         />
                     }
-                    stage={
+                    stages={[
                         <Stage
                             grids={{
                                 user: this.state.grid,
-                                ...this.state.suggestedGrids,
                             }}
                             onGridClick={this.onGridClick}
                             onGridUnClick={this.onGridUnClick}
@@ -551,8 +558,21 @@ export class App extends React.Component<AppProps, AppState> {
                             onCellClick={this.onCellClick}
                             onGhostGridClick={this.acceptGhostSuggestions}
                             pendingSuggestions={this.state.pendingSuggestions}
-                        />
-                    }
+                        />,
+                        <Stage
+                            grids={{
+                                ...this.state.suggestedGrids,
+                            }}
+                            vertical
+                            onGridClick={this.onGridClick}
+                            onGridUnClick={this.onGridUnClick}
+                            onCellMouseOver={this.onCellMouseOver}
+                            onCellMouseDown={this.onCellClick}
+                            onCellClick={this.onCellClick}
+                            onGhostGridClick={this.acceptGhostSuggestions}
+                            pendingSuggestions={this.state.pendingSuggestions}
+                        />,
+                    ]}
                     tileset={
                         <Tileset
                             buttons={this.state.tilesetButtons.map((b) => ({
@@ -562,6 +582,8 @@ export class App extends React.Component<AppProps, AppState> {
                                     this.state.selectedTilesetButtonName,
                                 onClick: this.onTilesetButtonClick,
                             }))}
+                            tilesets={SUPPORTED_TILESETS}
+                            onTileSetChange={this.updateTileSet}
                         />
                     }
                 />
