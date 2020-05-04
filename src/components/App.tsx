@@ -27,7 +27,6 @@ import { TilesetButtonProps } from "./TilesetButton";
 import { TILES, CENTER_TILE_POS } from "../constants/tiles";
 import {
     GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
-    NUMBER_OF_SUGGESTIONS_IN_WIDE,
     SUPPORTED_TILESETS,
 } from "../constants";
 import {
@@ -42,7 +41,7 @@ interface AppProps {}
 
 interface IModelResult {
     grid: number[][] | null;
-    repName: RepresentationName;
+    repName: any;
     pendingSuggestions: ISuggestion[];
 }
 export class App extends React.Component<AppProps, AppState> {
@@ -78,7 +77,7 @@ export class App extends React.Component<AppProps, AppState> {
                 toolRadius: DEFAULT_TOOL_RADIUS,
             });
             // 3. Update ghostLayer
-            this.updateGhostLayer(updatedGrid, this.state.gridSize, "narrow");
+            this.updateGhostLayer(updatedGrid, this.state.gridSize);
         }, 0);
     }
 
@@ -95,6 +94,9 @@ export class App extends React.Component<AppProps, AppState> {
     public onToolbarButtonClick = (_: React.MouseEvent, p: ButtonProps) => {
         // When user clicks on a button matching the representation name, update state
         const val: RepresentationName = p.buttonValue as RepresentationName;
+        if (!val) {
+            return;
+        }
         if (REPRESENTATION_NAMES_DICT[val]) {
             this.setState({
                 selectedToolbarButtonName: p.buttonName,
@@ -249,6 +251,78 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
+    /**
+     *
+     * Aggregate all recommendations into a single virtual grid.
+     *
+     */
+    public generateMajorityVoteGrid(
+        pendingSuggestions: SuggestionsByType | null,
+        currentGrid: number[][]
+    ): { grid: number[][]; pendingSuggestions: ISuggestion[] | null } | null {
+        const hashMapOfVotes: Record<string, number> = {};
+        const minVotesForMajority = 2; // 2/3 agents is considered majority
+        if (pendingSuggestions === null) {
+            return null;
+        }
+        // 1. Iterate over all agents/representation names' suggestions
+        REPRESENTATION_NAMES.forEach((repName) => {
+            if (typeof repName === "undefined") {
+                return;
+            }
+            const key: RepresentationName = repName;
+            const suggestions: ISuggestion[] | null =
+                pendingSuggestions[key!] || null;
+            if (suggestions !== null) {
+                suggestions!.forEach((s: ISuggestion) => {
+                    const stringifiedSuggestion = `${s.pos}_${s.tile}`;
+                    if (!hashMapOfVotes[stringifiedSuggestion]) {
+                        hashMapOfVotes[stringifiedSuggestion] = 0;
+                    }
+                    hashMapOfVotes[stringifiedSuggestion] += 1;
+                });
+            }
+        });
+
+        // 2. Tally votes for overlap
+        const majoritySuggestions = [];
+        for (let key in hashMapOfVotes) {
+            if (hashMapOfVotes[key] >= minVotesForMajority) {
+                const [posStr, tileStr] = key.split("_");
+                const pos = posStr.split(",").map(Number) as [number, number];
+                const tile = Number(tileStr);
+                majoritySuggestions.push({
+                    pos,
+                    tile,
+                });
+            }
+        }
+
+        // 3. Case 1 - No agreement, return null
+        if (!majoritySuggestions.length) {
+            return null;
+        }
+
+        // 3. Case 2 - Some agreement exists...
+        let suggestedGrid = currentGrid;
+
+        // 4. Apply suggestions to grid.
+        majoritySuggestions.forEach((suggestion: ISuggestion) => {
+            suggestedGrid = this.applyUpdateToGrid(
+                suggestedGrid,
+                suggestion.pos,
+                // pos, // use current neighborhood pos
+                suggestion.tile
+            );
+        });
+
+        // 5. Return data for rendering
+        return {
+            grid: suggestedGrid,
+            pendingSuggestions: majoritySuggestions,
+        };
+    }
+
     public acceptGhostSuggestions = (
         r: number,
         c: number,
@@ -256,24 +330,22 @@ export class App extends React.Component<AppProps, AppState> {
         repName?: RepresentationName
     ): void => {
         // 1. Find suggestedGrid
-        if (!repName) {
+        if (!repName || typeof repName === "undefined") {
             console.log("Unable to find ghost grid with name: ", repName);
             return;
         }
 
         console.log("Accepting Ghost suggestion from: ", repName);
-        const suggestedGrid = this.state.suggestedGrids[repName];
+        const key: RepresentationName = repName;
+        const suggestedGrid = this.state.suggestedGrids[key!];
 
         // 2. Apply changes from the corresponding grid.
         if (suggestedGrid) {
             const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
             const pendingSuggestions: SuggestionsByType = {};
-            // if (repName) {
-            //     pendingSuggestions[repName] = null;
-            // }
             const suggestedGrids = {} as SuggestedGrids;
             REPRESENTATION_NAMES.forEach((repName) => {
-                suggestedGrids[repName] = suggestedGrid;
+                suggestedGrids[key!] = suggestedGrid;
             });
             this.setState({
                 grid: suggestedGrid,
@@ -317,7 +389,8 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        const currentRepName = repName || this.state.currentRepresentation;
+        const currentRepName =
+            repName || this.state.currentRepresentation || "user";
 
         if (!currentRepName) {
             return;
@@ -363,7 +436,7 @@ export class App extends React.Component<AppProps, AppState> {
                 const pos = neighborhoodPositions[p];
                 const suggestedGrid = suggestedGridStack[p];
                 if (!suggestedGrid) {
-                    console.log("grids", suggestedGridStack, p);
+                    console.log("grids", suggestedGridStack, p, repName);
                     throw new Error("Missing grid!");
                 }
 
@@ -382,7 +455,7 @@ export class App extends React.Component<AppProps, AppState> {
                     }: IPredictionResult = await this.tfService.predictAndDraw(
                         suggestedGrid,
                         this.state.gridSize,
-                        repName,
+                        repName!,
                         pos,
                         this.state.toolRadius
                     );
@@ -407,6 +480,9 @@ export class App extends React.Component<AppProps, AppState> {
                                     suggestion.tile
                                 );
 
+                                /**
+                                 * Handle 'turtle' agent which returns a direction
+                                 */
                                 const direction = suggestion.direction;
                                 // When a direction is given...
                                 if (direction) {
@@ -478,16 +554,38 @@ export class App extends React.Component<AppProps, AppState> {
             REPRESENTATION_NAMES.map((repName) =>
                 fn(this.state.numSteps, repName)
             )
-        ).then((results: IModelResult[]) => {
+        ).then((results) => {
             // Save the suggestion in the state update
-            const suggestedGrids = {} as SuggestedGrids;
-            const pendingSuggestions = {} as SuggestionsByType;
-            results.forEach((result) => {
-                suggestedGrids[result.repName] = result.grid;
-                pendingSuggestions[result.repName] =
-                    result.pendingSuggestions || [];
+            const suggestedGrids = {} as any;
+            const pendingSuggestions = {} as any;
+            results.forEach((result: any) => {
+                if (result) {
+                    const key = result.repName as RepresentationName;
+                    if (typeof key !== "undefined" && key !== null) {
+                        suggestedGrids[key] = result.grid;
+                        pendingSuggestions[key] = result.pendingSuggestions;
+                    }
+                }
             });
             // console.log("pending_suggestions:", pendingSuggestions);
+
+            const majorityVoteData = this.generateMajorityVoteGrid(
+                pendingSuggestions,
+                currentGrid
+            );
+            if (majorityVoteData) {
+                suggestedGrids["majority"] = majorityVoteData.grid;
+                pendingSuggestions["majority"] =
+                    majorityVoteData.pendingSuggestions;
+                pendingSuggestions["user"] =
+                    majorityVoteData.pendingSuggestions;
+            } else {
+                suggestedGrids["majority"] = currentGrid;
+                pendingSuggestions["majority"] = [];
+            }
+
+            console.log("majority", majorityVoteData);
+
             // Update the UI state based on the suggested grids, etc.
             this.setState({
                 suggestedGrids,
@@ -506,7 +604,12 @@ export class App extends React.Component<AppProps, AppState> {
         // Cancel any pending calls
         this.getSuggestionsFromModel.cancel();
 
-        this.getSuggestionsFromModel(nextGrid, nextSize, repName, clickedTile);
+        this.getSuggestionsFromModel(
+            nextGrid,
+            nextSize,
+            undefined,
+            clickedTile
+        );
     };
 
     public updateTileSet = (t: string) => {
@@ -548,9 +651,11 @@ export class App extends React.Component<AppProps, AppState> {
                     }
                     stages={[
                         <Stage
-                            grids={{
-                                user: this.state.grid,
-                            }}
+                            grids={
+                                {
+                                    user: this.state.grid as number[][],
+                                } as SuggestedGrids
+                            }
                             onGridClick={this.onGridClick}
                             onGridUnClick={this.onGridUnClick}
                             onCellMouseOver={this.onCellMouseOver}

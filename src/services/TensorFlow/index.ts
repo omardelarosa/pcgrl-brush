@@ -16,6 +16,8 @@ export interface ModelsDictionary {
     narrow?: TSModelType;
     turtle?: TSModelType;
     wide?: TSModelType;
+    user?: TSModelType;
+    majority?: TSModelType;
 }
 
 export interface IParsedModelOutput {
@@ -29,7 +31,12 @@ export interface IGrid {
     t: Tensor2D;
 }
 
-export type RepresentationName = "narrow" | "turtle" | "wide";
+export type RepresentationName =
+    | "narrow"
+    | "turtle"
+    | "wide"
+    | "user"
+    | "majority";
 
 export interface ISuggestion {
     pos: [number, number];
@@ -47,13 +54,16 @@ export const REPRESENTATION_NAMES: RepresentationName[] = [
     "wide",
 ];
 
-export const REPRESENTATION_NAMES_DICT: Record<RepresentationName, boolean> = {
+export const REPRESENTATION_NAMES_DICT: Partial<Record<
+    RepresentationName,
+    boolean
+>> = {
     narrow: true,
     turtle: true,
     wide: true,
 };
 
-const MODEL_URLS: Record<RepresentationName, string> = {
+const MODEL_URLS: Partial<Record<RepresentationName, string>> = {
     narrow: "/models-tfjs/sokoban/narrow/model_1/model.json",
     turtle: "/models-tfjs/sokoban/turtle/model_1/model.json",
     wide: "/models-tfjs/sokoban/wide/model_1/model.json",
@@ -121,17 +131,16 @@ export class TensorFlowService {
             .catch((err) => {
                 console.error("Error Fetching Model from: ", MODEL_URLS);
                 console.error(err);
-                return null;
+                throw err;
+                // return null;
             });
     }
 
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
         for (let key in MODEL_URLS) {
-            let model: TSModelType | null | undefined = this.models[
-                key as RepresentationName
-            ];
-            if (!model) {
+            let model: any = this.models[key as RepresentationName];
+            if (typeof model !== "undefined") {
                 const url =
                     window.location.href.split("src")[0] +
                     MODEL_URLS[key as RepresentationName];
@@ -361,7 +370,7 @@ export class TensorFlowService {
         // }
 
         // console.log("radius", radius);
-
+        // console.log("repName", repName);
         let model: TSModelType | undefined | null = this.models[repName];
         if (!model) {
             console.log("Model unavailable! Fetching...");
@@ -476,7 +485,7 @@ export class TensorFlowService {
                 console.warn("No model available!");
                 return {
                     suggestedGrid: gridState,
-                    suggestions: null,
+                    suggestions: [],
                 };
             }
             // 2a. warning message

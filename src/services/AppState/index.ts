@@ -13,10 +13,10 @@ export const DEFAULT_NUM_STEPS = 1;
 
 type ToolbarButtonNames = SidebarButtonNames;
 export type SuggestedGrids = Partial<
-    Record<RepresentationName | "user", number[][] | null>
+    Record<RepresentationName, number[][] | null>
 >;
 export type SuggestionsByType = Partial<
-    Record<RepresentationName | "user", ISuggestion[] | null>
+    Record<RepresentationName, ISuggestion[] | null>
 >;
 
 export interface AppState {
@@ -60,21 +60,22 @@ export class AppStateService {
                 // Add additional buttons here and they will appear in the UI...
             ],
             toolbarButtons: [
-                {
-                    buttonName: SidebarButtonNames.PENCIL_BUTTON,
-                    buttonText: "Narrow",
-                    buttonValue: "narrow",
-                },
-                {
-                    buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
-                    buttonText: "Turtle",
-                    buttonValue: "turtle",
-                },
-                {
-                    buttonName: SidebarButtonNames.DROPLET_BUTTON,
-                    buttonText: "Wide",
-                    buttonValue: "wide",
-                },
+                // NOTE: Disabling these because they might serve no function now
+                // {
+                //     buttonName: SidebarButtonNames.PENCIL_BUTTON,
+                //     buttonText: "Narrow",
+                //     buttonValue: "narrow",
+                // },
+                // {
+                //     buttonName: SidebarButtonNames.EYE_DROPPER_BUTTON,
+                //     buttonText: "Turtle",
+                //     buttonValue: "turtle",
+                // },
+                // {
+                //     buttonName: SidebarButtonNames.DROPLET_BUTTON,
+                //     buttonText: "Wide",
+                //     buttonValue: "wide",
+                // },
                 // Add additional buttons here and they will appear in the UI...
             ],
             tilesetButtons: [
