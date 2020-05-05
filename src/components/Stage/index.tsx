@@ -2,18 +2,19 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
-import { SuggestedGrids } from "../../services/AppState";
-import { RepresentationName, ISuggestion } from "../../services/TensorFlow";
+import { SuggestedGrids, SuggestionsByType } from "../../services/AppState";
+import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
     grids: SuggestedGrids;
-    pendingSuggestions?: ISuggestion[];
+    pendingSuggestions?: SuggestionsByType | null;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
     onCellMouseDown?: CellHandler;
     onGhostGridClick?: CellHandler;
+    vertical?: boolean;
 }
 
 export function Stage({
@@ -24,12 +25,19 @@ export function Stage({
     onGridClick = noop,
     onCellMouseDown = noop,
     onGhostGridClick = noop,
-    pendingSuggestions = [],
+    pendingSuggestions = {},
+    vertical = false,
 }: StageProps) {
     return (
-        <div className="stage rounded-container">
+        <div
+            className={[
+                "stage",
+                "rounded-container",
+                vertical ? "vertical-arrangement" : "",
+            ].join(" ")}
+        >
             {Object.keys(grids).map(
-                (gridName, idx) =>
+                (gridName: RepresentationName | string, idx) =>
                     grids[gridName as RepresentationName] && (
                         <Grid
                             key={"grid_element_" + idx}
@@ -62,8 +70,14 @@ export function Stage({
                             onGridUnClick={
                                 gridName === "user" ? onGridUnClick : undefined
                             }
-                            gridLabel={gridName}
-                            pendingSuggestions={pendingSuggestions}
+                            gridLabel={gridName as RepresentationName}
+                            pendingSuggestions={
+                                pendingSuggestions
+                                    ? pendingSuggestions[
+                                          gridName as RepresentationName
+                                      ] || []
+                                    : []
+                            }
                         />
                     )
             )}

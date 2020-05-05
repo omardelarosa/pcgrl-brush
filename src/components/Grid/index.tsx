@@ -1,8 +1,15 @@
 import React from "react";
 import "./styles.css";
 import { ISuggestion } from "../../services/TensorFlow";
+import { RepresentationName } from "../../services/TensorFlow/index";
+import { BOARD_SIZE_PX } from "../../constants";
 
-export type CellHandler = (r: number, c: number, d: number) => void;
+export type CellHandler = (
+    r: number,
+    c: number,
+    d: number,
+    l?: RepresentationName
+) => void;
 
 export const noop = () => undefined;
 
@@ -14,7 +21,7 @@ interface GridProps {
     onGridClick?: CellHandler;
     onGridUnClick?: CellHandler;
     className?: string;
-    gridLabel?: string;
+    gridLabel?: RepresentationName;
     pendingSuggestions?: ISuggestion[];
 }
 interface GridState {}
@@ -23,18 +30,22 @@ function GridCell({
     row,
     col,
     data,
+    size,
     onCellClick = noop,
     onCellMouseOver = noop,
     onCellMouseDown = noop,
     isHighlighted = false,
+    gridLabel,
 }: {
     row: number;
     col: number;
     data: number;
+    size: number[];
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
     onCellMouseDown?: CellHandler;
     isHighlighted?: boolean;
+    gridLabel?: RepresentationName;
 }) {
     // TODO: add a classname based on the value to make tiling easier
     return (
@@ -44,7 +55,11 @@ function GridCell({
                 typeof data !== "undefined" ? `t${data}` : "",
                 isHighlighted ? "grid-cell__highlighted" : "",
             ].join(" ")}
-            onClick={() => onCellClick(row, col, data)}
+            /* style={{
+                width: size[0],
+                height: size[1],
+            }} */
+            onClick={() => onCellClick(row, col, data, gridLabel)}
             onMouseOver={() => onCellMouseOver(row, col, data)}
             onMouseDown={() => onCellMouseDown(row, col, data)}
         ></div>
@@ -72,7 +87,7 @@ export class Grid extends React.Component<GridProps, GridState> {
             onCellClick = noop,
             onCellMouseOver = noop,
             onCellMouseDown = noop,
-            gridLabel = "",
+            gridLabel,
             pendingSuggestions = [],
         } = this.props;
         const suggestionSet: Record<number, Record<number, boolean>> = {};
@@ -83,16 +98,24 @@ export class Grid extends React.Component<GridProps, GridState> {
             }
             suggestionSet[row][col] = true;
         });
+        const matrix = this.props.matrix;
+        let cellSize = [0, 0];
+        if (matrix) {
+            const cellPx = Math.round(BOARD_SIZE_PX / matrix.length / 2);
+            cellSize = [cellPx, cellPx];
+            // console.log("matrix", matrix.length, cellPx, BOARD_SIZE_PX);
+        }
+
         return (
             <div className="grid-wrapper">
                 <div
                     className={"grid " + this.props.className}
-                    onMouseDown={() => onGridClick(-1, -1, -1)}
-                    onMouseUp={() => onGridUnClick(-1, -1, -1)}
+                    onMouseDown={() => onGridClick(-1, -1, -1, gridLabel)}
+                    onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {this.props.matrix &&
-                        this.props.matrix.map((rowItems, rowIdx) => (
+                    {matrix &&
+                        matrix.map((rowItems, rowIdx) => (
                             <GridRow key={`row_${rowIdx}`}>
                                 {rowItems.map((item, colIdx) => {
                                     return (
@@ -101,6 +124,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                                             row={rowIdx}
                                             col={colIdx}
                                             data={item}
+                                            size={cellSize}
                                             isHighlighted={
                                                 suggestionSet[rowIdx] &&
                                                 suggestionSet[rowIdx][colIdx]
@@ -108,6 +132,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                                             onCellClick={onCellClick}
                                             onCellMouseOver={onCellMouseOver}
                                             onCellMouseDown={onCellMouseDown}
+                                            gridLabel={gridLabel || undefined}
                                         />
                                     );
                                 })}

@@ -1,5 +1,5 @@
 import React from "react";
-import { debounce, Cancelable } from "lodash";
+import { debounce } from "lodash";
 import "./App.css";
 import { Layout } from "./Layout";
 import { ButtonProps, SidebarButtonNames } from "./Button";
@@ -10,7 +10,6 @@ import { Logo } from "./Logo";
 
 import {
     TensorFlowService,
-    REPRESENTATION_NAMES,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
     IPredictionResult,
@@ -20,20 +19,31 @@ import {
     AppStateService,
     AppState,
     SuggestedGrids,
+    SuggestionsByType,
     DEFAULT_PLAYER_POS,
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
-import { TILES, GHOST_LAYER_DEBOUNCE_AMOUNT_MS } from "../constants/tiles";
+import { TILES, CENTER_TILE_POS } from "../constants/tiles";
+import {
+    GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
+    SUPPORTED_TILESETS,
+} from "../constants";
 import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
 } from "../services/AppState/index";
+import _ from "lodash";
+import { diffGrids } from "../services/Utils/index";
+import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
 
 interface AppProps {}
 
-// Temporarily aliasing this type until distinct button types are made
-
+interface IModelResult {
+    grid: number[][] | null;
+    repName: any;
+    pendingSuggestions: ISuggestion[];
+}
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
 
@@ -67,7 +77,7 @@ export class App extends React.Component<AppProps, AppState> {
                 toolRadius: DEFAULT_TOOL_RADIUS,
             });
             // 3. Update ghostLayer
-            this.updateGhostLayer(updatedGrid, this.state.gridSize, "narrow");
+            this.updateGhostLayer(updatedGrid, this.state.gridSize);
         }, 0);
     }
 
@@ -84,6 +94,9 @@ export class App extends React.Component<AppProps, AppState> {
     public onToolbarButtonClick = (_: React.MouseEvent, p: ButtonProps) => {
         // When user clicks on a button matching the representation name, update state
         const val: RepresentationName = p.buttonValue as RepresentationName;
+        if (!val) {
+            return;
+        }
         if (REPRESENTATION_NAMES_DICT[val]) {
             this.setState({
                 selectedToolbarButtonName: p.buttonName,
@@ -238,22 +251,116 @@ export class App extends React.Component<AppProps, AppState> {
         });
     };
 
-    public acceptGhostSuggestions = (): void => {
-        console.log("Accepting Ghost suggestion");
+    /**
+     *
+     * Aggregate all recommendations into a single virtual grid.
+     *
+     */
+    public generateMajorityVoteGrid(
+        pendingSuggestions: SuggestionsByType | null,
+        currentGrid: number[][]
+    ): { grid: number[][]; pendingSuggestions: ISuggestion[] | null } | null {
+        const hashMapOfVotes: Record<string, number> = {};
+        const minVotesForMajority = 2; // 2/3 agents is considered majority
+        if (pendingSuggestions === null) {
+            return null;
+        }
+        // 1. Iterate over all agents/representation names' suggestions
+        REPRESENTATION_NAMES.forEach((repName) => {
+            if (typeof repName === "undefined") {
+                return;
+            }
+            const key: RepresentationName = repName;
+            const suggestions: ISuggestion[] | null =
+                pendingSuggestions[key!] || null;
+            if (suggestions !== null) {
+                suggestions!.forEach((s: ISuggestion) => {
+                    const stringifiedSuggestion = `${s.pos}_${s.tile}`;
+                    if (!hashMapOfVotes[stringifiedSuggestion]) {
+                        hashMapOfVotes[stringifiedSuggestion] = 0;
+                    }
+                    hashMapOfVotes[stringifiedSuggestion] += 1;
+                });
+            }
+        });
+
+        // 2. Tally votes for overlap
+        const majoritySuggestions = [];
+        for (let key in hashMapOfVotes) {
+            if (hashMapOfVotes[key] >= minVotesForMajority) {
+                const [posStr, tileStr] = key.split("_");
+                const pos = posStr.split(",").map(Number) as [number, number];
+                const tile = Number(tileStr);
+                majoritySuggestions.push({
+                    pos,
+                    tile,
+                });
+            }
+        }
+
+        // 3. Case 1 - No agreement, return null
+        if (!majoritySuggestions.length) {
+            return null;
+        }
+
+        // 3. Case 2 - Some agreement exists...
+        let suggestedGrid = currentGrid;
+
+        // 4. Apply suggestions to grid.
+        majoritySuggestions.forEach((suggestion: ISuggestion) => {
+            suggestedGrid = this.applyUpdateToGrid(
+                suggestedGrid,
+                suggestion.pos,
+                // pos, // use current neighborhood pos
+                suggestion.tile
+            );
+        });
+
+        // 5. Return data for rendering
+        return {
+            grid: suggestedGrid,
+            pendingSuggestions: majoritySuggestions,
+        };
+    }
+
+    public acceptGhostSuggestions = (
+        r: number,
+        c: number,
+        d: number,
+        repName?: RepresentationName
+    ): void => {
         // 1. Find suggestedGrid
-        if (!this.state.currentRepresentation) {
+        if (!repName || typeof repName === "undefined") {
+            console.log("Unable to find ghost grid with name: ", repName);
             return;
         }
-        const suggestedGrid = this.state.suggestedGrids[
-            this.state.currentRepresentation
-        ];
+
+        console.log("Accepting Ghost suggestion from: ", repName);
+        const key: RepresentationName = repName;
+        const suggestedGrid = this.state.suggestedGrids[key!];
+
+        // 2. Apply changes from the corresponding grid.
         if (suggestedGrid) {
             const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
+            const pendingSuggestions: SuggestionsByType = {};
+            const suggestedGrids = {} as SuggestedGrids;
+            REPRESENTATION_NAMES.forEach((repName) => {
+                suggestedGrids[key!] = suggestedGrid;
+            });
             this.setState({
                 grid: suggestedGrid,
                 playerPos: nextPlayerPos ? nextPlayerPos : this.state.playerPos,
-                pendingSuggestions: [],
+                pendingSuggestions,
+                suggestedGrids,
             });
+
+            // 3. Get more updates from model to support chaining
+            this.getSuggestionsFromModel(
+                suggestedGrid,
+                this.state.gridSize,
+                undefined,
+                CENTER_TILE_POS
+            );
         }
     };
 
@@ -282,90 +389,210 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        const currentRepName = repName || this.state.currentRepresentation;
+        const currentRepName =
+            repName || this.state.currentRepresentation || "user";
 
         if (!currentRepName) {
             return;
         }
 
+        const currentGrid = nextGrid;
+
         // console.log(`Processing state using ${currentRepName} model`);
 
-        const fn = async (steps: number) => {
+        const fn = async (
+            steps: number,
+            repName: RepresentationName
+        ): Promise<IModelResult> => {
+            // console.log("START: repName: ", repName);
             // // uncomment to debug
-            // console.log("NumSteps: ", steps);
-
             // Keep track of all mutations
-            const suggestionSet: Record<number, Record<number, number>> = {};
-            let suggestedGrid = this.state.grid;
-            // Keep generating new grids based on suggestions
-            for (let i = 0; i < steps; i++) {
-                const {
-                    suggestions,
-                }: IPredictionResult = await this.tfService.predictAndDraw(
-                    this.state.grid,
-                    this.state.gridSize,
-                    currentRepName,
+            const suggestedGridStack = [currentGrid];
+
+            // This doesn't matter for wide.
+            let neighborhoodPositions = [];
+
+            // Use relative position for non-wide
+            if (repName !== "wide") {
+                neighborhoodPositions = this.tfService.getNeighbors(
                     clickedTile,
+                    this.state.gridSize,
                     this.state.toolRadius
                 );
-                // For debugging -- uncomment
-                // console.log("step: ", i, " suggestions: ", suggestions);
-                if (suggestions) {
-                    for (let j = 0; j < suggestions.length; j++) {
-                        const suggestion: ISuggestion | null = suggestions[j];
-                        if (suggestion) {
-                            suggestedGrid = this.applyUpdateToGrid(
-                                suggestedGrid,
-                                suggestion.pos,
-                                suggestion.tile
-                            );
-                        }
-                    }
-
-                    // Add latest suggestions
-                    suggestions.forEach((suggestion: ISuggestion) => {
-                        const [row, col] = suggestion.pos;
-                        if (!suggestionSet[row]) {
-                            suggestionSet[row] = {};
-                        }
-                        suggestionSet[row][col] = suggestion.tile;
-                    });
-                } else {
-                    // When there are no suggestions, terminate loop
-                    break;
+            } else {
+                // Just repeat clicked position over and over for wide.
+                for (let i = 0; i < steps; i++) {
+                    neighborhoodPositions.push(clickedTile);
                 }
+            }
+
+            // console.log("neighbors: ", neighborhoodPositions);
+            // For
+            // const iters = repName !== 'wide' ? neighborhoodPositions.length : NUMBER_OF_SUGGESTIONS_IN_WIDE;
+            const iters = neighborhoodPositions.length;
+
+            // For each position in neighborhood...
+            for (let p = 0; p < iters; p++) {
+                const pos = neighborhoodPositions[p];
+                const suggestedGrid = suggestedGridStack[p];
+                if (!suggestedGrid) {
+                    console.log("grids", suggestedGridStack, p, repName);
+                    throw new Error("Missing grid!");
+                }
+
+                // Skip invalid positions
+                if (pos === null) {
+                    suggestedGridStack.push(suggestedGrid);
+                    continue;
+                }
+
+                // console.log("pos: ", pos);
+                // Keep generating new grids based on suggestions
+                const suggestionsApplied: ISuggestion[] = [];
+                for (let i = 0; i < steps; i++) {
+                    const {
+                        suggestions,
+                    }: IPredictionResult = await this.tfService.predictAndDraw(
+                        suggestedGrid,
+                        this.state.gridSize,
+                        repName!,
+                        pos,
+                        this.state.toolRadius
+                    );
+                    // For debugging -- uncomment
+                    // console.log("step: ", p, i, "pos: ", pos);
+                    if (suggestions) {
+                        // const numSuggestions = suggestions.length;
+                        let numSuggestions = 1;
+                        // When using wide, steps means the number of tiles to consider
+                        if (repName === "wide") {
+                            numSuggestions = steps;
+                        }
+                        for (let j = 0; j < numSuggestions; j++) {
+                            const suggestion: ISuggestion | null =
+                                suggestions[j];
+                            suggestionsApplied.push(suggestion);
+                            if (suggestion) {
+                                const nextSuggestedGrid = this.applyUpdateToGrid(
+                                    suggestedGrid,
+                                    suggestion.pos,
+                                    // pos, // use current neighborhood pos
+                                    suggestion.tile
+                                );
+
+                                /**
+                                 * Handle 'turtle' agent which returns a direction
+                                 */
+                                const direction = suggestion.direction;
+                                // When a direction is given...
+                                if (direction) {
+                                    // recompute neighbors by shifting in direction
+                                    const updatedNeighborhoodPositions = this.tfService.getNeighbors(
+                                        [
+                                            clickedTile[0] + direction[0],
+                                            clickedTile[1] + direction[1],
+                                        ],
+                                        this.state.gridSize,
+                                        this.state.toolRadius
+                                    );
+
+                                    // Change neighborhood positions to match
+                                    updatedNeighborhoodPositions.forEach(
+                                        (nextPos, idx) => {
+                                            neighborhoodPositions[
+                                                idx
+                                            ] = nextPos;
+                                        }
+                                    );
+                                }
+
+                                suggestedGridStack.push(nextSuggestedGrid);
+                            }
+                        }
+                    } else {
+                        // When there are no suggestions, terminate loop
+                        break;
+                    }
+                }
+                // console.log("suggestions_applied:", suggestionsApplied);
             }
 
             // Save the suggestion in the state update
-            const suggestedGrids = {} as SuggestedGrids;
-            suggestedGrids[currentRepName] = suggestedGrid;
-
-            let pendingSuggestions = null;
-            // Aggregate all the suggestions from the loop above.
-            for (let row in suggestionSet) {
-                const o = suggestionSet[row];
-                for (let col in o) {
+            const nextGrid: number[][] | null =
+                _.last(suggestedGridStack) || null;
+            // console.log("END: repName: ", repName);
+            // console.log("SuggestedGridStack:", suggestedGridStack);
+            const pendingSuggestions: ISuggestion[] = [];
+            // Aggregate all the suggestions from the loop above by diffing
+            // current grid and last suggested grid.
+            if (nextGrid) {
+                const diffs = diffGrids(
+                    currentGrid,
+                    nextGrid,
+                    this.state.gridSize
+                );
+                diffs.forEach((diff) => {
                     const suggestion: ISuggestion = {
-                        pos: [Number(row), Number(col)],
-                        tile: o[col],
+                        pos: diff.pos,
+                        tile: diff.b,
                     };
-                    if (!pendingSuggestions) {
-                        pendingSuggestions = [];
-                    }
                     pendingSuggestions.push(suggestion);
-                }
+                });
             }
+
+            // console.log("pending_suggestions:", pendingSuggestions);
+
+            return {
+                grid: nextGrid,
+                repName,
+                pendingSuggestions,
+            };
+        };
+
+        // Invoke async anon function -- a trick to do an async/await loop
+        Promise.all(
+            REPRESENTATION_NAMES.map((repName) =>
+                fn(this.state.numSteps, repName)
+            )
+        ).then((results) => {
+            // Save the suggestion in the state update
+            const suggestedGrids = {} as any;
+            const pendingSuggestions = {} as any;
+            results.forEach((result: any) => {
+                if (result) {
+                    const key = result.repName as RepresentationName;
+                    if (typeof key !== "undefined" && key !== null) {
+                        suggestedGrids[key] = result.grid;
+                        pendingSuggestions[key] = result.pendingSuggestions;
+                    }
+                }
+            });
+            // console.log("pending_suggestions:", pendingSuggestions);
+
+            const majorityVoteData = this.generateMajorityVoteGrid(
+                pendingSuggestions,
+                currentGrid
+            );
+            if (majorityVoteData) {
+                suggestedGrids["majority"] = majorityVoteData.grid;
+                pendingSuggestions["majority"] =
+                    majorityVoteData.pendingSuggestions;
+                pendingSuggestions["user"] =
+                    majorityVoteData.pendingSuggestions;
+            } else {
+                suggestedGrids["majority"] = currentGrid;
+                pendingSuggestions["majority"] = [];
+            }
+
+            console.log("majority", majorityVoteData);
 
             // Update the UI state based on the suggested grids, etc.
             this.setState({
                 suggestedGrids,
                 // Add an array of pending suggestions to state
-                pendingSuggestions: pendingSuggestions || [],
+                pendingSuggestions,
             });
-        };
-
-        // Invoke async anon function -- a trick to do an async/await loop
-        fn(this.state.numSteps);
+        });
     }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
     public updateGhostLayer = (
@@ -377,12 +604,23 @@ export class App extends React.Component<AppProps, AppState> {
         // Cancel any pending calls
         this.getSuggestionsFromModel.cancel();
 
-        this.getSuggestionsFromModel(nextGrid, nextSize, repName, clickedTile);
+        this.getSuggestionsFromModel(
+            nextGrid,
+            nextSize,
+            undefined,
+            clickedTile
+        );
+    };
+
+    public updateTileSet = (t: string) => {
+        this.setState({
+            tileset: t,
+        });
     };
 
     public render() {
         return (
-            <div className="App">
+            <div className={["App", this.state.tileset || ""].join(" ")}>
                 <Layout
                     logo={<Logo />}
                     sidebar={
@@ -411,12 +649,13 @@ export class App extends React.Component<AppProps, AppState> {
                             enableResize
                         />
                     }
-                    stage={
+                    stages={[
                         <Stage
-                            grids={{
-                                user: this.state.grid,
-                                ...this.state.suggestedGrids,
-                            }}
+                            grids={
+                                {
+                                    user: this.state.grid as number[][],
+                                } as SuggestedGrids
+                            }
                             onGridClick={this.onGridClick}
                             onGridUnClick={this.onGridUnClick}
                             onCellMouseOver={this.onCellMouseOver}
@@ -424,8 +663,21 @@ export class App extends React.Component<AppProps, AppState> {
                             onCellClick={this.onCellClick}
                             onGhostGridClick={this.acceptGhostSuggestions}
                             pendingSuggestions={this.state.pendingSuggestions}
-                        />
-                    }
+                        />,
+                        <Stage
+                            grids={{
+                                ...this.state.suggestedGrids,
+                            }}
+                            vertical
+                            onGridClick={this.onGridClick}
+                            onGridUnClick={this.onGridUnClick}
+                            onCellMouseOver={this.onCellMouseOver}
+                            onCellMouseDown={this.onCellClick}
+                            onCellClick={this.onCellClick}
+                            onGhostGridClick={this.acceptGhostSuggestions}
+                            pendingSuggestions={this.state.pendingSuggestions}
+                        />,
+                    ]}
                     tileset={
                         <Tileset
                             buttons={this.state.tilesetButtons.map((b) => ({
@@ -435,6 +687,8 @@ export class App extends React.Component<AppProps, AppState> {
                                     this.state.selectedTilesetButtonName,
                                 onClick: this.onTilesetButtonClick,
                             }))}
+                            tilesets={SUPPORTED_TILESETS}
+                            onTileSetChange={this.updateTileSet}
                         />
                     }
                 />

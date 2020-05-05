@@ -9,6 +9,12 @@
     padding: 0.5rem 0.5rem;
 }
 
+.tileset-toggle {
+    margin: 4px;
+    padding: 8px;
+    font-size: 0.3em;
+}
+
 .tileset-icon {
     width: 64px;
     height: 64px;
@@ -17,6 +23,14 @@
     background-size: 512px 512px;
     border: 1px solid black;
     image-rendering: pixelated;
+}
+
+.classic .tileset-icon {
+    background-image: url(../../assets/images/tiles-classic.png);
+}
+
+.dungeon .tileset-icon {
+    background-image: url(../../assets/images/tiles-dungeon.png);
 }
 
 .tileset-icon.t0 {
@@ -33,7 +47,7 @@
 }
 
 @keyframes playerAnim {
-    from{
+    from {
         background-position-x: 0px;
     }
     to {
@@ -51,7 +65,7 @@
 }
 
 @keyframes targetAnim {
-    from{
+    from {
         background-position-x: 0px;
     }
     to {

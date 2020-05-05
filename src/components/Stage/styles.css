@@ -1,9 +1,21 @@
 .stage {
-    flex: 1;
+    /* flex: 1; */
+    flex: 4 4;
     display: flex;
     overflow-y: scroll;
     justify-content: space-around;
     flex-wrap: wrap;
+    /* max-width: 40vw; */
+    padding: 12px;
+}
+
+.stage.vertical-arrangement {
+    flex-direction: column;
+    flex: 1 1;
+}
+
+.stage.vertical-arrangement .grid-row {
+    flex: 0 0;
 }
 
 .stage .user-canvas {
@@ -16,15 +28,15 @@
 .ghost-canvas .grid-row .grid-cell {
     flex: 1 0;
     flex-basis: 100%;
-    width: 32px;
-    height: 32px;
+    width: 16px;
+    height: 16px;
     background-color: #fff;
     /* border-left: 1px solid; This might be sideways, given the flexbox */
     border-right: 1px solid;
     border-bottom: 1px solid;
     /* This is a basic sprite mapping */
     background-image: url(../../assets/images/tiles.png);
-    background-size: 256px 256px;
+    background-size: 128px 128px;
     image-rendering: pixelated;
 }
 
@@ -33,11 +45,11 @@
 }
 
 .ghost-canvas .grid-cell.t1 {
-    background-position: 0px -32px;
+    background-position: 0px -16px;
 }
 
 .ghost-canvas .grid-cell.t2 {
-    background-position: 0px -64px;
+    background-position: 0px -32px;
     animation: ghostPlayerAnim 1s steps(3) infinite;
 }
 
@@ -46,16 +58,16 @@
         background-position-x: 0px;
     }
     to {
-        background-position-x: -96px;
+        background-position-x: -48px;
     }
 }
 
 .ghost-canvas .grid-cell.t3 {
-    background-position: 0px -96px;
+    background-position: 0px -48px;
 }
 
 .ghost-canvas .grid-cell.t4 {
-    background-position: 0px -128px;
+    background-position: 0px -64px;
     animation: ghostTargetAnim 1s steps(4) infinite;
 }
 
@@ -64,7 +76,7 @@
         background-position-x: 0px;
     }
     to {
-        background-position-x: -128px;
+        background-position-x: -64px;
     }
 }
 
