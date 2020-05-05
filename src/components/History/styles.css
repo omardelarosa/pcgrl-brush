@@ -1,0 +1,18 @@
+.historyButton {
+    background-color: #474747;
+    border-radius: 10px;
+    margin: 5px;
+    padding: 10px 20px;
+}
+
+.historyButton:hover {
+    background-color: #B5B5B5;
+}
+
+.historyButton:focus {
+    background-color: #B5B5B5;
+}
+
+.svgIcon {
+    filter: invert(1);
+}
