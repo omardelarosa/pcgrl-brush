@@ -3,6 +3,7 @@ import "./styles.css";
 import { ButtonProps, Button } from "../Button";
 import { SizeUpdater } from "../SizeUpdater";
 import { StepSize } from "../StepSize";
+import { History } from "../History";
 
 export interface ToolbarProps {
     buttons?: ButtonProps[];
@@ -21,6 +22,7 @@ export function Toolbar({
 }: ToolbarProps) {
     return (
         <div className="toolbar rounded-container">
+            <History />
             {buttons.map((props: ButtonProps, idx: number) => (
                 <Button {...props} key={"toolbar_button_" + idx} />
             ))}
