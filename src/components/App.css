@@ -4,9 +4,9 @@
 
 .rounded-container {
     background: #aaa;
-    border-radius: 3px;
+    /* border-radius: 3px; */
     padding: 5px;
-    margin: 10px;
+    /* margin: 10px; */
     flex: 1;
     display: flex;
 }

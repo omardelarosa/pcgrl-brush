@@ -20,6 +20,12 @@
 
 .user-stage {
     background-color: #fff;
+    flex: 8;
+}
+
+.suggestions-stage {
+    flex: 2;
+    background-color: #fff;
 }
 
 .ghost-canvas {
@@ -89,10 +95,27 @@
     }
 }
 
+@keyframes suggestionAnim {
+    from {
+        filter: opacity(50%);
+    }
+    to {
+        filter: opacity(100%);
+    }
+}
+
 .user-canvas .grid-cell.grid-cell__highlighted {
-    filter: hue-rotate(300deg); /* this turns the cell green */
+    /* filter: hue-rotate(300deg); this turns the cell green */
+    /* filter: saturate(400%); */
+    animation: suggestionAnim 750ms infinite;
 }
 
 .ghost-canvas .grid-cell.grid-cell__highlighted {
-    filter: hue-rotate(90deg); /* this turns the cell green */
+    /* filter: hue-rotate(90deg); this turns the cell green */
+    /* filter: saturate(400%); */
+    filter: opacity(100%);
+}
+
+.ghost-canvas .grid-cell {
+    filter: opacity(40%);
 }

@@ -21,7 +21,7 @@ export function StepSize({
     });
     return (
         <div className="container">
-            <div>
+            <div className="step-size__slider">
                 Step Size
                 <input
                     type="range"

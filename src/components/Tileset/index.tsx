@@ -13,7 +13,7 @@ export function Tileset(props: TilesetProps) {
     const { buttons, tilesets = [], onTileSetChange = _.noop } = props;
     return (
         <div className={"tileset"}>
-            <div>
+            <div className="tileset-heading">
                 TILESET
                 <hr></hr>
                 {tilesets.map((t) => (

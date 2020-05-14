@@ -17,7 +17,7 @@
     border-top: 1px solid;
 }
 
-.grid-row:first-child {
+.grid-row:first-child .grid-cell {
     border-left: 1px solid;
 }
 
@@ -103,7 +103,3 @@
     float: left;
     padding-top: 100%;
 }
-
-/* .grid-row:first-child {
-    border-left: 1px solid;
-} */

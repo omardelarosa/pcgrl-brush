@@ -13,11 +13,6 @@ interface LayoutComponent {
 }
 
 export function Layout({
-    sidebar,
-    toolbar,
-    stages,
-    logo,
-    tileset,
     header = [],
     footer = [],
     center = [],
@@ -30,7 +25,3 @@ export function Layout({
         </div>
     );
 }
-
-// <div className="sidebar-container">{sidebar}</div>
-//                 <div className="stage-container">{stages}</div>
-//                 <div className="tileset-container">{tileset}</div>

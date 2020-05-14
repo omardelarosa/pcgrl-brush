@@ -5,12 +5,22 @@ import IconRedo from "../../assets/icons/103-redo.svg";
 
 export function History() {
     return (
-        <div>
-            <button className="historyButton">
-                <img src={IconUndo} alt="cursor 1" height="20 px" className="svgIcon" />
+        <div className="cell">
+            <button className="historyButton cursorButton">
+                <img
+                    src={IconUndo}
+                    alt="cursor 1"
+                    height="20 px"
+                    className="svgIcon"
+                />
             </button>
-            <button className="historyButton">
-                <img src={IconRedo} alt="cursor 1" height="20 px" className="svgIcon" />
+            <button className="historyButton cursorButton">
+                <img
+                    src={IconRedo}
+                    alt="cursor 1"
+                    height="20 px"
+                    className="svgIcon"
+                />
             </button>
         </div>
     );

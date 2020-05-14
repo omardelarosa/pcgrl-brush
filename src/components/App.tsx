@@ -655,6 +655,22 @@ export class App extends React.Component<AppProps, AppState> {
                         </div>,
                         <div className="stage-container">
                             <Stage
+                                grids={{
+                                    ...this.state.suggestedGrids,
+                                }}
+                                vertical={false}
+                                classSuffix="suggestions-stage"
+                                onGridClick={this.onGridClick}
+                                onGridUnClick={this.onGridUnClick}
+                                onCellMouseOver={this.onCellMouseOver}
+                                onCellMouseDown={this.onCellClick}
+                                onCellClick={this.onCellClick}
+                                onGhostGridClick={this.acceptGhostSuggestions}
+                                pendingSuggestions={
+                                    this.state.pendingSuggestions
+                                }
+                            />
+                            <Stage
                                 grids={
                                     {
                                         user: this.state.grid as number[][],
@@ -686,26 +702,7 @@ export class App extends React.Component<AppProps, AppState> {
                             />
                         </div>,
                     ]}
-                    footer={[
-                        <div className="footer-stage-wrapper">
-                            <Stage
-                                grids={{
-                                    ...this.state.suggestedGrids,
-                                }}
-                                vertical={false}
-                                classSuffix="suggestions-stage"
-                                onGridClick={this.onGridClick}
-                                onGridUnClick={this.onGridUnClick}
-                                onCellMouseOver={this.onCellMouseOver}
-                                onCellMouseDown={this.onCellClick}
-                                onCellClick={this.onCellClick}
-                                onGhostGridClick={this.acceptGhostSuggestions}
-                                pendingSuggestions={
-                                    this.state.pendingSuggestions
-                                }
-                            />
-                        </div>,
-                    ]}
+                    footer={[<div className="footer-stage-wrapper"></div>]}
                 />
             </div>
         );

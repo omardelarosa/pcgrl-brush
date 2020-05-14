@@ -3,6 +3,7 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
+    background-color: #aaa;
     /* background-color: red; */
 }
 
@@ -15,6 +16,7 @@
 .logo-container {
     flex: 1;
     display: flex;
+    padding: 8px;
 }
 
 .toolbar-container {
@@ -37,6 +39,7 @@
 .stage-container {
     flex: 8;
     display: flex;
+    flex-direction: column;
     /* background-color: yellow; */
 }
 
@@ -49,6 +52,6 @@
 }
 
 .footer-container {
-    flex: 2;
+    flex: 1;
     display: flex;
 }
