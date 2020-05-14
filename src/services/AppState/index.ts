@@ -37,6 +37,8 @@ export interface AppState {
     numSteps: number;
     tileset?: string;
     playMode?: boolean;
+    gridHistory: number[][][];
+    gridHistoryCurrentIndex: number;
 }
 
 export class AppStateService {
@@ -140,6 +142,8 @@ export class AppStateService {
             numSteps: DEFAULT_NUM_STEPS,
             tileset: "classic",
             playMode: false,
+            gridHistory: [],
+            gridHistoryCurrentIndex: -1, // no history
         };
     }
 }

@@ -12,6 +12,7 @@ export interface ToolbarProps {
     enableResize?: boolean;
     onUpdateGridSize: (newSize: [number, number]) => void;
     onStepSizeChange?: (step: number, radius: number) => void;
+    onHistoryClick?: (direction: number) => void;
 }
 
 export function Toolbar({
@@ -21,13 +22,14 @@ export function Toolbar({
     enableResize,
     onStepSizeChange,
     playMode,
+    onHistoryClick,
 }: ToolbarProps) {
     if (playMode) {
         return null;
     }
     return (
         <div className="toolbar rounded-container">
-            <History />
+            <History onHistoryClick={onHistoryClick} />
             {buttons.map((props: ButtonProps, idx: number) => (
                 <Button {...props} key={"toolbar_button_" + idx} />
             ))}

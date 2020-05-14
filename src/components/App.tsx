@@ -31,6 +31,7 @@ import {
     EMPTY_SUGGESTED_GRIDS,
     ValidKeysType,
     ACTIONS,
+    MAX_GRID_HISTORY_LENGTH,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
@@ -76,6 +77,9 @@ export class App extends React.Component<AppProps, AppState> {
                 null,
                 DEFAULT_PLAYER_POS
             );
+
+            // add checkpoint
+            this.addCheckpoint(this.state.grid);
             this.setState({
                 grid: updatedGrid,
                 numSteps: DEFAULT_NUM_STEPS,
@@ -106,6 +110,11 @@ export class App extends React.Component<AppProps, AppState> {
                     case ACTIONS.MOVE_RIGHT:
                         this.movePlayer([1, 0]);
                         break;
+                    case ACTIONS.RETRY:
+                        this.restoreCheckpoint(
+                            this.state.gridHistoryCurrentIndex
+                        );
+                        break;
                 }
             }
         }
@@ -113,7 +122,15 @@ export class App extends React.Component<AppProps, AppState> {
 
     public movePlayer(direction: number[]) {
         const playerPos = this.getPlayerPosFromGrid(this.state.grid);
-        console.log("direction:", direction, playerPos);
+        // console.log("direction:", direction, playerPos);
+
+        // TODO: branch based on which game is being played
+
+        /**
+         *
+         * SOKOBAN RULES:
+         *
+         */
         if (playerPos) {
             const nextPos: [number, number] = [
                 playerPos[0] + direction[0],
@@ -162,8 +179,17 @@ export class App extends React.Component<AppProps, AppState> {
             // Replace old position
             nextGrid = this.applyUpdateToGrid(nextGrid, playerPos, TILES.EMPTY);
 
+            // TODO: log player action, maybe checkpoint
             this.setState({ grid: nextGrid });
         }
+
+        /**
+         * ZELDA RULES:
+         *
+         *
+         */
+
+        // TODO...
     }
 
     public isValidPos(pos: [number, number]) {
@@ -186,6 +212,18 @@ export class App extends React.Component<AppProps, AppState> {
         let playMode = false;
         if (p.buttonName === SidebarButtonNames.PLAY) {
             playMode = true;
+        }
+
+        if (playMode !== this.state.playMode) {
+            // when re-entering edit mode...
+            if (playMode === false) {
+                // Restore to the last edited state
+                this.restoreCheckpoint(this.state.gridHistoryCurrentIndex);
+            } else {
+                // add checkpoint during mode transition
+                this.addCheckpoint(this.state.grid);
+            }
+            // when entering play mode
         }
 
         this.setState({
@@ -286,6 +324,71 @@ export class App extends React.Component<AppProps, AppState> {
         return grid;
     }
 
+    public addCheckpoint(grid: number[][]) {
+        // TODO: add support for dynamic grid sizes
+
+        let gridHistory = [...this.state.gridHistory];
+
+        // Keep track of current spot in history
+        const gridHistoryCurrentIndex = this.state.gridHistoryCurrentIndex;
+        let gridHistoryNextIndex = gridHistoryCurrentIndex + 1;
+
+        while (
+            gridHistory.length >= MAX_GRID_HISTORY_LENGTH ||
+            gridHistoryCurrentIndex < gridHistory.length - 1
+        ) {
+            gridHistory.shift();
+            gridHistoryNextIndex--; // decrement pointer, since list is getting shorter
+        }
+
+        // Add new grid
+        gridHistory.push(grid);
+
+        const a: number[][] | undefined = gridHistory[gridHistoryCurrentIndex];
+        const b: number[][] | undefined = gridHistory[gridHistoryNextIndex];
+
+        // Don't add redundant checkpoints
+        if (a && b) {
+            const diffs = diffGrids(a, b, this.state.gridSize);
+            if (!diffs.length) {
+                return;
+            }
+        }
+
+        this.setState({
+            gridHistory,
+            gridHistoryCurrentIndex: gridHistoryNextIndex,
+        });
+    }
+
+    public restoreCheckpoint(idx: number): void {
+        if (idx === -1) {
+            console.log("No history!");
+            return;
+        }
+
+        if (idx >= this.state.gridHistory.length) {
+            console.log("Too far forward...");
+            return;
+        }
+
+        const nextGrid: number[][] = this.state.gridHistory[idx];
+        this.setState(
+            {
+                grid: this.state.gridHistory[idx],
+                gridHistoryCurrentIndex: idx,
+                suggestedGrids: {
+                    ...EMPTY_SUGGESTED_GRIDS,
+                },
+                pendingSuggestions: null,
+            },
+            () => {
+                // TODO: safely get suggestions for new grid...
+                this.getSuggestionsFromModel(nextGrid, this.state.gridSize);
+            }
+        );
+    }
+
     public activateCell(row: number, col: number, data: number): void {
         // Grid is immutable in playmode
         if (this.state.playMode) {
@@ -317,10 +420,14 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
+        // add checkpoint
+        this.addCheckpoint(this.state.grid);
+
         this.setState({
             grid: nextGrid,
             playerPos: nextPlayerPos || this.state.playerPos,
         });
+
         this.updateGhostLayer(nextGrid, this.state.gridSize, undefined, [
             row,
             col,
@@ -331,6 +438,10 @@ export class App extends React.Component<AppProps, AppState> {
         const { grid: nextGrid } = TensorFlowService.createGameGrid(
             this.state.gridSize
         );
+
+        // add checkpoint
+        this.addCheckpoint(this.state.grid);
+
         this.setState({
             grid: nextGrid,
             playerPos: DEFAULT_PLAYER_POS,
@@ -455,6 +566,10 @@ export class App extends React.Component<AppProps, AppState> {
             REPRESENTATION_NAMES.forEach((repName) => {
                 suggestedGrids[key!] = suggestedGrid;
             });
+
+            // add checkpoint
+            this.addCheckpoint(this.state.grid);
+
             this.setState({
                 grid: suggestedGrid,
                 playerPos: nextPlayerPos ? nextPlayerPos : this.state.playerPos,
@@ -472,17 +587,42 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
+    public handleUndoRedo = (direction: number) => {
+        // console.log("direction: ", direction);
+        this.restoreCheckpoint(this.state.gridHistoryCurrentIndex + direction);
+    };
+
     public updateToolRadius = (step: number, radius: number): void => {
         if (radius !== this.state.toolRadius) {
-            this.setState({
-                toolRadius: radius,
-            });
+            this.setState(
+                {
+                    toolRadius: radius,
+                    pendingSuggestions: null,
+                    suggestedGrids: { ...EMPTY_SUGGESTED_GRIDS },
+                },
+                () => {
+                    this.getSuggestionsFromModel(
+                        this.state.grid,
+                        this.state.gridSize
+                    );
+                }
+            );
         }
 
         if (step !== this.state.numSteps) {
-            this.setState({
-                numSteps: step,
-            });
+            this.setState(
+                {
+                    numSteps: step,
+                    pendingSuggestions: null,
+                    suggestedGrids: { ...EMPTY_SUGGESTED_GRIDS },
+                },
+                () => {
+                    this.getSuggestionsFromModel(
+                        this.state.grid,
+                        this.state.gridSize
+                    );
+                }
+            );
         }
     };
 
@@ -754,6 +894,7 @@ export class App extends React.Component<AppProps, AppState> {
                                         this.state.currentRepresentation,
                                     onClick: this.onToolbarButtonClick,
                                 }))}
+                                onHistoryClick={this.handleUndoRedo}
                                 gridSize={this.state.gridSize}
                                 onUpdateGridSize={this.onUpdateGridSize}
                                 onStepSizeChange={this.updateToolRadius}
