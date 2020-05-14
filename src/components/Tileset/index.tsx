@@ -14,7 +14,7 @@ export function Tileset(props: TilesetProps) {
     return (
         <div className={"tileset"}>
             <div className="tileset-heading">
-                TILESET
+                <span className="heavy-text">Tileset</span>
                 <hr></hr>
                 {tilesets.map((t) => (
                     <button

@@ -127,6 +127,7 @@ export class AppStateService {
             isClicking: false,
             toolRadius: DEFAULT_TOOL_RADIUS,
             numSteps: DEFAULT_NUM_STEPS,
+            tileset: "classic",
         };
     }
 }

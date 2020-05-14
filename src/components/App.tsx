@@ -28,6 +28,7 @@ import { TILES, CENTER_TILE_POS } from "../constants/tiles";
 import {
     GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
     SUPPORTED_TILESETS,
+    EMPTY_SUGGESTED_GRIDS,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
@@ -36,6 +37,7 @@ import {
 import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
+import { LoadingIndicator } from "./LoadingIndicator";
 
 interface AppProps {}
 
@@ -343,7 +345,7 @@ export class App extends React.Component<AppProps, AppState> {
         if (suggestedGrid) {
             const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
             const pendingSuggestions: SuggestionsByType = {};
-            const suggestedGrids = {} as SuggestedGrids;
+            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
             REPRESENTATION_NAMES.forEach((repName) => {
                 suggestedGrids[key!] = suggestedGrid;
             });
@@ -556,7 +558,7 @@ export class App extends React.Component<AppProps, AppState> {
             )
         ).then((results) => {
             // Save the suggestion in the state update
-            const suggestedGrids = {} as any;
+            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
             const pendingSuggestions = {} as any;
             results.forEach((result: any) => {
                 if (result) {
@@ -584,7 +586,7 @@ export class App extends React.Component<AppProps, AppState> {
                 pendingSuggestions["majority"] = [];
             }
 
-            console.log("majority", majorityVoteData);
+            // console.log("majority", majorityVoteData);
 
             // Update the UI state based on the suggested grids, etc.
             this.setState({

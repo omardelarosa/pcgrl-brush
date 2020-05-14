@@ -1,8 +1,12 @@
 import React from "react";
 import "./styles.css";
 import { ISuggestion } from "../../services/TensorFlow";
-import { RepresentationName } from "../../services/TensorFlow/index";
+import {
+    RepresentationName,
+    TensorFlowService,
+} from "../../services/TensorFlow/index";
 import { BOARD_SIZE_PX } from "../../constants";
+import { LoadingIndicator } from "../LoadingIndicator";
 
 export type CellHandler = (
     r: number,
@@ -103,7 +107,6 @@ export class Grid extends React.Component<GridProps, GridState> {
         if (matrix) {
             const cellPx = Math.round(BOARD_SIZE_PX / matrix.length / 2);
             cellSize = [cellPx, cellPx];
-            // console.log("matrix", matrix.length, cellPx, BOARD_SIZE_PX);
         }
 
         return (
@@ -114,7 +117,7 @@ export class Grid extends React.Component<GridProps, GridState> {
                     onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {matrix &&
+                    {!TensorFlowService.isEmptyGrid(matrix) && matrix ? (
                         matrix.map((rowItems, rowIdx) => (
                             <GridRow key={`row_${rowIdx}`}>
                                 {rowItems.map((item, colIdx) => {
@@ -137,11 +140,11 @@ export class Grid extends React.Component<GridProps, GridState> {
                                     );
                                 })}
                             </GridRow>
-                        ))}
+                        ))
+                    ) : (
+                        <LoadingIndicator />
+                    )}
                 </div>
-                {gridLabel && (
-                    <div className="grid-row grid-label">{gridLabel}</div>
-                )}
             </div>
         );
     }

@@ -1,6 +1,6 @@
 // Loading tensorflow ideally only at the app level
 import * as tf from "@tensorflow/tfjs";
-import { Rank, Tensor, Tensor2D } from "@tensorflow/tfjs";
+import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
 import { TILES } from "../../constants/tiles";
 import { isEmpty, argSort } from "../Utils/index";
@@ -98,6 +98,14 @@ export class TensorFlowService {
             grid: t.arraySync() as number[][],
             t,
         };
+    }
+
+    public static isEmptyGrid(grid?: number[][] | null): boolean {
+        if (!grid) return true;
+
+        const t = tf.tensor2d(grid);
+        const sum = t.sum().arraySync();
+        return sum === 0;
     }
 
     public createGrameGrid(size: [number, number]): IGrid {

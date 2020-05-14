@@ -1,5 +1,21 @@
+/* custom fonts */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;900&display=swap");
+
 .App {
     text-align: center;
+    font-family: "Roboto", sans-serif;
+}
+
+.heavy-text {
+    font-weight: 800;
+}
+
+.standard-text {
+    font-family: "Roboto", sans-serif;
+}
+
+.pixel-text {
+    font-family: "Press Start 2P", cursive;
 }
 
 .rounded-container {

@@ -3,7 +3,12 @@ import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
 import { SuggestedGrids, SuggestionsByType } from "../../services/AppState";
-import { RepresentationName } from "../../services/TensorFlow";
+import {
+    RepresentationName,
+    TensorFlowService,
+} from "../../services/TensorFlow";
+import { LoadingIndicator } from "../LoadingIndicator";
+import { isEmpty } from "lodash";
 
 interface StageProps {
     grids: SuggestedGrids;
@@ -39,50 +44,62 @@ export function Stage({
                 classSuffix,
             ].join(" ")}
         >
+            {isEmpty(grids) ? <LoadingIndicator /> : null}
             {Object.keys(grids).map(
-                (gridName: RepresentationName | string, idx) =>
-                    grids[gridName as RepresentationName] && (
-                        <Grid
-                            key={"grid_element_" + idx}
-                            className={
-                                gridName === "user"
-                                    ? "user-canvas"
-                                    : "ghost-canvas"
-                            }
-                            matrix={
-                                grids[gridName as RepresentationName] || null
-                            }
-                            onCellClick={
-                                gridName === "user" ? onCellClick : undefined
-                            }
-                            onCellMouseOver={
-                                gridName === "user"
-                                    ? onCellMouseOver
-                                    : undefined
-                            }
-                            onCellMouseDown={
-                                gridName === "user"
-                                    ? onCellMouseDown
-                                    : undefined
-                            }
-                            onGridClick={
-                                gridName === "user"
-                                    ? onGridClick
-                                    : onGhostGridClick
-                            }
-                            onGridUnClick={
-                                gridName === "user" ? onGridUnClick : undefined
-                            }
-                            gridLabel={gridName as RepresentationName}
-                            pendingSuggestions={
-                                pendingSuggestions
-                                    ? pendingSuggestions[
-                                          gridName as RepresentationName
-                                      ] || []
-                                    : []
-                            }
-                        />
-                    )
+                (gridName: RepresentationName | string, idx) => (
+                    <div>
+                        {grids[gridName as RepresentationName] ? (
+                            <Grid
+                                key={"grid_element_" + idx}
+                                className={
+                                    gridName === "user"
+                                        ? "user-canvas"
+                                        : "ghost-canvas"
+                                }
+                                matrix={
+                                    grids[gridName as RepresentationName] ||
+                                    null
+                                }
+                                onCellClick={
+                                    gridName === "user"
+                                        ? onCellClick
+                                        : undefined
+                                }
+                                onCellMouseOver={
+                                    gridName === "user"
+                                        ? onCellMouseOver
+                                        : undefined
+                                }
+                                onCellMouseDown={
+                                    gridName === "user"
+                                        ? onCellMouseDown
+                                        : undefined
+                                }
+                                onGridClick={
+                                    gridName === "user"
+                                        ? onGridClick
+                                        : onGhostGridClick
+                                }
+                                onGridUnClick={
+                                    gridName === "user"
+                                        ? onGridUnClick
+                                        : undefined
+                                }
+                                gridLabel={gridName as RepresentationName}
+                                pendingSuggestions={
+                                    pendingSuggestions
+                                        ? pendingSuggestions[
+                                              gridName as RepresentationName
+                                          ] || []
+                                        : []
+                                }
+                            />
+                        ) : (
+                            <LoadingIndicator />
+                        )}
+                        {<div className="grid-label">{gridName}</div>}
+                    </div>
+                )
             )}
         </div>
     );
