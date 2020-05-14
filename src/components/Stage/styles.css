@@ -18,11 +18,20 @@
     flex: 0 0;
 }
 
-.stage .user-canvas {
+.user-stage {
+    background-color: #fff;
 }
 
 .ghost-canvas {
     opacity: 0.7;
+}
+
+.user-canvas {
+    height: 80%;
+}
+
+.footer-stage-wrapper {
+    width: 100%;
 }
 
 .ghost-canvas .grid-row .grid-cell {

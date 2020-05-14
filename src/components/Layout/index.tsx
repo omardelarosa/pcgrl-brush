@@ -7,6 +7,9 @@ interface LayoutComponent {
     sidebar?: JSX.Element;
     stages?: JSX.Element[];
     tileset?: JSX.Element;
+    footer?: JSX.Element[];
+    header?: JSX.Element[];
+    center?: JSX.Element[];
 }
 
 export function Layout({
@@ -15,18 +18,19 @@ export function Layout({
     stages,
     logo,
     tileset,
+    header = [],
+    footer = [],
+    center = [],
 }: LayoutComponent) {
     return (
         <div className="layout-container">
-            <div className="heading-container">
-                <div className="logo-container">{logo}</div>
-                <div className="toolbar-container">{toolbar}</div>
-            </div>
-            <div className="central-container">
-                <div className="sidebar-container">{sidebar}</div>
-                <div className="stage-container">{stages}</div>
-                <div className="tileset-container">{tileset}</div>
-            </div>
+            <div className="heading-container">{header}</div>
+            <div className="central-container">{center}</div>
+            <div className="footer-container">{footer}</div>
         </div>
     );
 }
+
+// <div className="sidebar-container">{sidebar}</div>
+//                 <div className="stage-container">{stages}</div>
+//                 <div className="tileset-container">{tileset}</div>

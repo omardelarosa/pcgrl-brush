@@ -622,75 +622,90 @@ export class App extends React.Component<AppProps, AppState> {
         return (
             <div className={["App", this.state.tileset || ""].join(" ")}>
                 <Layout
-                    logo={<Logo />}
-                    sidebar={
-                        <Sidebar
-                            buttons={this.state.sidebarButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonName ===
-                                    this.state.selectedSidebarButtonName,
-                                onClick: this.onSidebarButtonClick,
-                            }))}
-                        />
-                    }
-                    toolbar={
-                        <Toolbar
-                            buttons={this.state.toolbarButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonValue ===
-                                    this.state.currentRepresentation,
-                                onClick: this.onToolbarButtonClick,
-                            }))}
-                            gridSize={this.state.gridSize}
-                            onUpdateGridSize={this.onUpdateGridSize}
-                            onStepSizeChange={this.updateToolRadius}
-                            enableResize
-                        />
-                    }
-                    stages={[
-                        <Stage
-                            grids={
-                                {
-                                    user: this.state.grid as number[][],
-                                } as SuggestedGrids
-                            }
-                            onGridClick={this.onGridClick}
-                            onGridUnClick={this.onGridUnClick}
-                            onCellMouseOver={this.onCellMouseOver}
-                            onCellMouseDown={this.onCellClick}
-                            onCellClick={this.onCellClick}
-                            onGhostGridClick={this.acceptGhostSuggestions}
-                            pendingSuggestions={this.state.pendingSuggestions}
-                        />,
-                        <Stage
-                            grids={{
-                                ...this.state.suggestedGrids,
-                            }}
-                            vertical
-                            onGridClick={this.onGridClick}
-                            onGridUnClick={this.onGridUnClick}
-                            onCellMouseOver={this.onCellMouseOver}
-                            onCellMouseDown={this.onCellClick}
-                            onCellClick={this.onCellClick}
-                            onGhostGridClick={this.acceptGhostSuggestions}
-                            pendingSuggestions={this.state.pendingSuggestions}
-                        />,
+                    header={[
+                        <div className="logo-container">
+                            <Logo />
+                        </div>,
+                        <div className="toolbar-container">
+                            <Toolbar
+                                buttons={this.state.toolbarButtons.map((b) => ({
+                                    ...b,
+                                    selected:
+                                        b.buttonValue ===
+                                        this.state.currentRepresentation,
+                                    onClick: this.onToolbarButtonClick,
+                                }))}
+                                gridSize={this.state.gridSize}
+                                onUpdateGridSize={this.onUpdateGridSize}
+                                onStepSizeChange={this.updateToolRadius}
+                            />
+                        </div>,
                     ]}
-                    tileset={
-                        <Tileset
-                            buttons={this.state.tilesetButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonValue ===
-                                    this.state.selectedTilesetButtonName,
-                                onClick: this.onTilesetButtonClick,
-                            }))}
-                            tilesets={SUPPORTED_TILESETS}
-                            onTileSetChange={this.updateTileSet}
-                        />
-                    }
+                    center={[
+                        <div className="sidebar-container">
+                            <Sidebar
+                                buttons={this.state.sidebarButtons.map((b) => ({
+                                    ...b,
+                                    selected:
+                                        b.buttonName ===
+                                        this.state.selectedSidebarButtonName,
+                                    onClick: this.onSidebarButtonClick,
+                                }))}
+                            />
+                        </div>,
+                        <div className="stage-container">
+                            <Stage
+                                grids={
+                                    {
+                                        user: this.state.grid as number[][],
+                                    } as SuggestedGrids
+                                }
+                                classSuffix="user-stage"
+                                onGridClick={this.onGridClick}
+                                onGridUnClick={this.onGridUnClick}
+                                onCellMouseOver={this.onCellMouseOver}
+                                onCellMouseDown={this.onCellClick}
+                                onCellClick={this.onCellClick}
+                                onGhostGridClick={this.acceptGhostSuggestions}
+                                pendingSuggestions={
+                                    this.state.pendingSuggestions
+                                }
+                            />
+                        </div>,
+                        <div className="tileset-container">
+                            <Tileset
+                                buttons={this.state.tilesetButtons.map((b) => ({
+                                    ...b,
+                                    selected:
+                                        b.buttonValue ===
+                                        this.state.selectedTilesetButtonName,
+                                    onClick: this.onTilesetButtonClick,
+                                }))}
+                                tilesets={SUPPORTED_TILESETS}
+                                onTileSetChange={this.updateTileSet}
+                            />
+                        </div>,
+                    ]}
+                    footer={[
+                        <div className="footer-stage-wrapper">
+                            <Stage
+                                grids={{
+                                    ...this.state.suggestedGrids,
+                                }}
+                                vertical={false}
+                                classSuffix="suggestions-stage"
+                                onGridClick={this.onGridClick}
+                                onGridUnClick={this.onGridUnClick}
+                                onCellMouseOver={this.onCellMouseOver}
+                                onCellMouseDown={this.onCellClick}
+                                onCellClick={this.onCellClick}
+                                onGhostGridClick={this.acceptGhostSuggestions}
+                                pendingSuggestions={
+                                    this.state.pendingSuggestions
+                                }
+                            />
+                        </div>,
+                    ]}
                 />
             </div>
         );

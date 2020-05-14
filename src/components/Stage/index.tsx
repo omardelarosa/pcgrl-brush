@@ -7,6 +7,7 @@ import { RepresentationName } from "../../services/TensorFlow";
 
 interface StageProps {
     grids: SuggestedGrids;
+    classSuffix?: string;
     pendingSuggestions?: SuggestionsByType | null;
     onCellClick?: CellHandler;
     onCellMouseOver?: CellHandler;
@@ -27,6 +28,7 @@ export function Stage({
     onGhostGridClick = noop,
     pendingSuggestions = {},
     vertical = false,
+    classSuffix = "",
 }: StageProps) {
     return (
         <div
@@ -34,6 +36,7 @@ export function Stage({
                 "stage",
                 "rounded-container",
                 vertical ? "vertical-arrangement" : "",
+                classSuffix,
             ].join(" ")}
         >
             {Object.keys(grids).map(

@@ -43,7 +43,12 @@
 .tileset-container {
     flex: 2;
     /* padding-right: 0.5em; */
-    padding: 0.5rem 0.5rem 0 0;
+    /* padding: 0.5rem 0.5rem 0 0; */
     height: 100%;
     padding-bottom: 0px;
+}
+
+.footer-container {
+    flex: 2;
+    display: flex;
 }
