@@ -101,8 +101,10 @@ export class TensorFlowService {
     }
 
     public static isEmptyGrid(grid?: number[][] | null): boolean {
-        if (!grid) return true;
+        // 1. Test for object emptiness
+        if (isEmpty(grid) || !grid) return true;
 
+        // 2. Check for sum of 0
         const t = tf.tensor2d(grid);
         const sum = t.sum().arraySync();
         return sum === 0;

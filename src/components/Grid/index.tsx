@@ -7,6 +7,8 @@ import {
 } from "../../services/TensorFlow/index";
 import { BOARD_SIZE_PX } from "../../constants";
 import { LoadingIndicator } from "../LoadingIndicator";
+import { times } from "lodash";
+import { TILES } from "../../constants/tiles";
 
 export type CellHandler = (
     r: number,
@@ -74,6 +76,21 @@ function GridRow({ children }: { children: JSX.Element[] }) {
     return <div className="grid-row noselect">{children}</div>;
 }
 
+function OuterWall() {
+    return <div className={`grid-cell t${TILES.SOLID}`}></div>;
+}
+
+function WallRow({ matrix }: { matrix: number[][] }) {
+    const size = matrix.length + 2;
+    return (
+        <div className="grid-row noselect">
+            {times(size, (n) => (
+                <OuterWall key={`outer_wall_${n}`} />
+            ))}
+        </div>
+    );
+}
+
 export class Grid extends React.Component<GridProps, GridState> {
     public static defaultProps: GridProps = {
         matrix: [[]],
@@ -118,29 +135,45 @@ export class Grid extends React.Component<GridProps, GridState> {
                 >
                     {/* Iterate over matrix making row elements */}
                     {!TensorFlowService.isEmptyGrid(matrix) && matrix ? (
-                        matrix.map((rowItems, rowIdx) => (
-                            <GridRow key={`row_${rowIdx}`}>
-                                {rowItems.map((item, colIdx) => {
-                                    return (
-                                        <GridCell
-                                            key={`${rowIdx}_${colIdx}`}
-                                            row={rowIdx}
-                                            col={colIdx}
-                                            data={item}
-                                            size={cellSize}
-                                            isHighlighted={
-                                                suggestionSet[rowIdx] &&
-                                                suggestionSet[rowIdx][colIdx]
-                                            }
-                                            onCellClick={onCellClick}
-                                            onCellMouseOver={onCellMouseOver}
-                                            onCellMouseDown={onCellMouseDown}
-                                            gridLabel={gridLabel || undefined}
-                                        />
-                                    );
-                                })}
-                            </GridRow>
-                        ))
+                        [
+                            <WallRow matrix={matrix} />,
+                            ...matrix.map((rowItems, rowIdx) => (
+                                <GridRow key={`row_${rowIdx}`}>
+                                    {[
+                                        <OuterWall />,
+                                        ...rowItems.map((item, colIdx) => {
+                                            return (
+                                                <GridCell
+                                                    key={`${rowIdx}_${colIdx}`}
+                                                    row={rowIdx}
+                                                    col={colIdx}
+                                                    data={item}
+                                                    size={cellSize}
+                                                    isHighlighted={
+                                                        suggestionSet[rowIdx] &&
+                                                        suggestionSet[rowIdx][
+                                                            colIdx
+                                                        ]
+                                                    }
+                                                    onCellClick={onCellClick}
+                                                    onCellMouseOver={
+                                                        onCellMouseOver
+                                                    }
+                                                    onCellMouseDown={
+                                                        onCellMouseDown
+                                                    }
+                                                    gridLabel={
+                                                        gridLabel || undefined
+                                                    }
+                                                />
+                                            );
+                                        }),
+                                        <OuterWall />,
+                                    ]}
+                                </GridRow>
+                            )),
+                            <WallRow matrix={matrix} />,
+                        ]
                     ) : (
                         <LoadingIndicator />
                     )}
