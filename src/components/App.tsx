@@ -38,6 +38,7 @@ import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
 import { LoadingIndicator } from "./LoadingIndicator";
+import { Footer } from "./Footer/index";
 
 interface AppProps {}
 
@@ -704,7 +705,11 @@ export class App extends React.Component<AppProps, AppState> {
                             />
                         </div>,
                     ]}
-                    footer={[<div className="footer-stage-wrapper"></div>]}
+                    footer={[
+                        <div className="footer-stage-wrapper">
+                            <Footer />
+                        </div>,
+                    ]}
                 />
             </div>
         );

@@ -1,0 +1,13 @@
+.footer-links {
+    list-style-type: none;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 16px 0 16px 0;
+    margin: 0;
+}
+
+.footer-links ul li {
+    display: flex;
+    flex: 1;
+}
