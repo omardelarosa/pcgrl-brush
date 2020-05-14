@@ -68,6 +68,9 @@
 
 .grid-cell.t2 {
     background-position: 0px -128px;
+}
+
+.play-mode .grid-cell.t2 {
     animation: playerAnim 1s steps(3) infinite;
 }
 
@@ -86,6 +89,9 @@
 
 .grid-cell.t4 {
     background-position: 0px -256px;
+}
+
+.play-mode .grid-cell.t4 {
     animation: targetAnim 1s steps(4) infinite;
 }
 

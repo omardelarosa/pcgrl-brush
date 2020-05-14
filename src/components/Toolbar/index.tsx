@@ -6,6 +6,7 @@ import { StepSize } from "../StepSize";
 import { History } from "../History";
 
 export interface ToolbarProps {
+    playMode?: boolean;
     buttons?: ButtonProps[];
     gridSize: [number, number];
     enableResize?: boolean;
@@ -19,7 +20,11 @@ export function Toolbar({
     gridSize,
     enableResize,
     onStepSizeChange,
+    playMode,
 }: ToolbarProps) {
+    if (playMode) {
+        return null;
+    }
     return (
         <div className="toolbar rounded-container">
             <History />

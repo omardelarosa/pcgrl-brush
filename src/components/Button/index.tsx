@@ -11,6 +11,8 @@ export enum SidebarButtonNames {
     PAINT_FORMAT_BUTTON = "PAINT_FORMAT_BUTTON",
     TRASH = "TRASH",
     ERASE = "ERASE",
+    PLAY = "PLAY",
+    SAVE = "SAVE",
 }
 
 export interface ButtonProps {

@@ -43,6 +43,9 @@
 
 .tileset-icon.t2 {
     background-position: 0px -128px;
+}
+
+.play-mode .tileset-icon.t2 {
     animation: playerAnim 1s steps(3) infinite;
 }
 
@@ -61,6 +64,9 @@
 
 .tileset-icon.t4 {
     background-position: 0px -256px;
+}
+
+.play-mode .tileset-icon.t4 {
     animation: targetAnim 1s steps(4) infinite;
 }
 

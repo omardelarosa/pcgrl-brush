@@ -6,6 +6,8 @@ import { ReactComponent as IconEyedropper } from "../../assets/icons/011-eyedrop
 import { ReactComponent as IconDroplet } from "../../assets/icons/012-droplet.svg";
 import { ReactComponent as IconPaintFormat } from "../../assets/icons/013-paint-format.svg";
 import { ReactComponent as IconBin } from "../../assets/icons/173-bin.svg";
+import { ReactComponent as IconPlay } from "../../assets/icons/278-play2.svg";
+import { ReactComponent as IconSave } from "../../assets/icons/099-floppy-disk.svg";
 
 const ICON_HEIGHT = 32;
 const ICON_WIDTH = 32;
@@ -17,6 +19,8 @@ export enum IconNames {
     DROPLET = "droplet",
     PAINT_FORMAT = "paint-format",
     BIN = "bin",
+    PLAY = "play",
+    SAVE = "save",
 }
 
 interface IconProps {
@@ -31,6 +35,7 @@ export function IconWrapper(props: IconProps) {
         width: ICON_WIDTH,
         ...props,
     };
+    delete iconProps.iconName; // not valid svg prop
     switch (props.iconName) {
         // 3. Add a case statement for each supported icon
         case IconNames.PENCIL:
@@ -43,6 +48,10 @@ export function IconWrapper(props: IconProps) {
             return <IconPaintFormat {...iconProps} />;
         case IconNames.BIN:
             return <IconBin {...iconProps} />;
+        case IconNames.PLAY:
+            return <IconPlay {...iconProps} />;
+        case IconNames.SAVE:
+            return <IconSave {...iconProps} />;
         default:
             // This is basically an unsupported icon
             return <div>{`UNSUPPORTED ICON: ${props.iconName}`}</div>;

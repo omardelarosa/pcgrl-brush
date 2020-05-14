@@ -36,6 +36,7 @@ export interface AppState {
     toolRadius: number;
     numSteps: number;
     tileset?: string;
+    playMode?: boolean;
 }
 
 export class AppStateService {
@@ -55,6 +56,16 @@ export class AppStateService {
                 {
                     buttonName: SidebarButtonNames.TRASH,
                     iconName: IconNames.BIN,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.PLAY,
+                    iconName: IconNames.PLAY,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.SAVE,
+                    iconName: IconNames.SAVE,
                     className: "sidebar",
                 },
                 // Add additional buttons here and they will appear in the UI...
@@ -128,6 +139,7 @@ export class AppStateService {
             toolRadius: DEFAULT_TOOL_RADIUS,
             numSteps: DEFAULT_NUM_STEPS,
             tileset: "classic",
+            playMode: false,
         };
     }
 }

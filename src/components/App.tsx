@@ -29,6 +29,8 @@ import {
     GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
     SUPPORTED_TILESETS,
     EMPTY_SUGGESTED_GRIDS,
+    ValidKeysType,
+    ACTIONS,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
@@ -38,6 +40,7 @@ import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
 import { Footer } from "./Footer/index";
+import { KEY_MAPPINGS } from "../constants/index";
 
 interface AppProps {}
 
@@ -81,6 +84,98 @@ export class App extends React.Component<AppProps, AppState> {
             // 3. Update ghostLayer
             this.updateGhostLayer(updatedGrid, this.state.gridSize);
         }, 0);
+
+        window.addEventListener("keypress", this.handleKeyPress);
+    }
+
+    public handleKeyPress = (ev: KeyboardEvent) => {
+        if (this.state.playMode) {
+            if (ev.code in KEY_MAPPINGS.codes_to_actions) {
+                const action: ACTIONS =
+                    KEY_MAPPINGS.codes_to_actions[ev.code as ValidKeysType];
+                switch (action) {
+                    case ACTIONS.MOVE_DOWN:
+                        this.movePlayer([0, 1]);
+                        break;
+                    case ACTIONS.MOVE_UP:
+                        this.movePlayer([0, -1]);
+                        break;
+                    case ACTIONS.MOVE_LEFT:
+                        this.movePlayer([-1, 0]);
+                        break;
+                    case ACTIONS.MOVE_RIGHT:
+                        this.movePlayer([1, 0]);
+                        break;
+                }
+            }
+        }
+    };
+
+    public movePlayer(direction: number[]) {
+        const playerPos = this.getPlayerPosFromGrid(this.state.grid);
+        console.log("direction:", direction, playerPos);
+        if (playerPos) {
+            const nextPos: [number, number] = [
+                playerPos[0] + direction[0],
+                playerPos[1] + direction[1],
+            ];
+
+            // Guard against invalid positions
+            if (!this.isValidPos(nextPos)) {
+                return;
+            }
+
+            // check for crate in nextPos
+            const tileAtNextPos = this.state.grid[nextPos[0]][nextPos[1]];
+
+            let nextCratePos: [number, number] | null = null;
+
+            // Handle crate collision
+            if (tileAtNextPos === TILES.CRATE) {
+                nextCratePos = [
+                    nextPos[0] + direction[0],
+                    nextPos[1] + direction[1],
+                ];
+
+                // If the player would force the crate into an invalid position...
+                if (!this.isValidPos(nextCratePos)) {
+                    return;
+                }
+            }
+
+            // Apply player movement
+            let nextGrid = this.applyUpdateToGrid(
+                this.state.grid,
+                nextPos,
+                TILES.PLAYER
+            );
+
+            // Apply crate movement
+            if (nextCratePos) {
+                nextGrid = this.applyUpdateToGrid(
+                    nextGrid,
+                    nextCratePos,
+                    TILES.CRATE
+                );
+            }
+
+            // Replace old position
+            nextGrid = this.applyUpdateToGrid(nextGrid, playerPos, TILES.EMPTY);
+
+            this.setState({ grid: nextGrid });
+        }
+    }
+
+    public isValidPos(pos: [number, number]) {
+        if (
+            pos[0] >= 0 &&
+            pos[1] >= 0 &&
+            pos[0] < this.state.gridSize[0] &&
+            pos[1] < this.state.gridSize[1]
+        ) {
+            return true;
+        }
+        return false;
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
@@ -88,8 +183,14 @@ export class App extends React.Component<AppProps, AppState> {
             this.clearStage();
         }
 
+        let playMode = false;
+        if (p.buttonName === SidebarButtonNames.PLAY) {
+            playMode = true;
+        }
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
+            playMode,
         });
     };
 
@@ -186,6 +287,11 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public activateCell(row: number, col: number, data: number): void {
+        // Grid is immutable in playmode
+        if (this.state.playMode) {
+            return;
+        }
+
         // const { grid } = TensorFlowService.cloneGrid(this.state.grid);
         let nextGrid: number[][] = this.state.grid;
         let nextPlayerPos: [number, number] | null = null;
@@ -606,6 +712,10 @@ export class App extends React.Component<AppProps, AppState> {
         // Cancel any pending calls
         this.getSuggestionsFromModel.cancel();
 
+        if (this.state.playMode) {
+            return;
+        }
+
         this.getSuggestionsFromModel(
             nextGrid,
             nextSize,
@@ -622,7 +732,13 @@ export class App extends React.Component<AppProps, AppState> {
 
     public render() {
         return (
-            <div className={["App", this.state.tileset || ""].join(" ")}>
+            <div
+                className={[
+                    "App",
+                    this.state.tileset || "",
+                    this.state.playMode ? "play-mode" : "",
+                ].join(" ")}
+            >
                 <Layout
                     header={[
                         <div className="logo-container">
@@ -630,6 +746,7 @@ export class App extends React.Component<AppProps, AppState> {
                         </div>,
                         <div className="toolbar-container">
                             <Toolbar
+                                playMode={this.state.playMode}
                                 buttons={this.state.toolbarButtons.map((b) => ({
                                     ...b,
                                     selected:
@@ -656,22 +773,26 @@ export class App extends React.Component<AppProps, AppState> {
                             />
                         </div>,
                         <div className="stage-container">
-                            <Stage
-                                grids={{
-                                    ...this.state.suggestedGrids,
-                                }}
-                                vertical={false}
-                                classSuffix="suggestions-stage"
-                                onGridClick={this.onGridClick}
-                                onGridUnClick={this.onGridUnClick}
-                                onCellMouseOver={this.onCellMouseOver}
-                                onCellMouseDown={this.onCellClick}
-                                onCellClick={this.onCellClick}
-                                onGhostGridClick={this.acceptGhostSuggestions}
-                                pendingSuggestions={
-                                    this.state.pendingSuggestions
-                                }
-                            />
+                            {!this.state.playMode && (
+                                <Stage
+                                    grids={{
+                                        ...this.state.suggestedGrids,
+                                    }}
+                                    vertical={false}
+                                    classSuffix="suggestions-stage"
+                                    onGridClick={this.onGridClick}
+                                    onGridUnClick={this.onGridUnClick}
+                                    onCellMouseOver={this.onCellMouseOver}
+                                    onCellMouseDown={this.onCellClick}
+                                    onCellClick={this.onCellClick}
+                                    onGhostGridClick={
+                                        this.acceptGhostSuggestions
+                                    }
+                                    pendingSuggestions={
+                                        this.state.pendingSuggestions
+                                    }
+                                />
+                            )}
                             <Stage
                                 grids={
                                     {
@@ -686,23 +807,32 @@ export class App extends React.Component<AppProps, AppState> {
                                 onCellClick={this.onCellClick}
                                 onGhostGridClick={this.acceptGhostSuggestions}
                                 pendingSuggestions={
-                                    this.state.pendingSuggestions
+                                    this.state.playMode
+                                        ? null
+                                        : this.state.pendingSuggestions
                                 }
                             />
                         </div>,
-                        <div className="tileset-container">
-                            <Tileset
-                                buttons={this.state.tilesetButtons.map((b) => ({
-                                    ...b,
-                                    selected:
-                                        b.buttonValue ===
-                                        this.state.selectedTilesetButtonName,
-                                    onClick: this.onTilesetButtonClick,
-                                }))}
-                                tilesets={SUPPORTED_TILESETS}
-                                onTileSetChange={this.updateTileSet}
-                            />
-                        </div>,
+                        this.state.playMode ? (
+                            <div />
+                        ) : (
+                            <div className="tileset-container">
+                                <Tileset
+                                    buttons={this.state.tilesetButtons.map(
+                                        (b) => ({
+                                            ...b,
+                                            selected:
+                                                b.buttonValue ===
+                                                this.state
+                                                    .selectedTilesetButtonName,
+                                            onClick: this.onTilesetButtonClick,
+                                        })
+                                    )}
+                                    tilesets={SUPPORTED_TILESETS}
+                                    onTileSetChange={this.updateTileSet}
+                                />
+                            </div>
+                        ),
                     ]}
                     footer={[
                         <div className="footer-stage-wrapper">
