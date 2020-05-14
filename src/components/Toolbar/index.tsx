@@ -13,6 +13,8 @@ export interface ToolbarProps {
     onUpdateGridSize: (newSize: [number, number]) => void;
     onStepSizeChange?: (step: number, radius: number) => void;
     onHistoryClick?: (direction: number) => void;
+    defaultStep: number;
+    defaultSelected: number;
 }
 
 export function Toolbar({
@@ -23,6 +25,8 @@ export function Toolbar({
     onStepSizeChange,
     playMode,
     onHistoryClick,
+    defaultStep,
+    defaultSelected,
 }: ToolbarProps) {
     if (playMode) {
         return null;
@@ -40,7 +44,11 @@ export function Toolbar({
                     gridSize={gridSize}
                 />
             )}
-            <StepSize onEffect={onStepSizeChange} />
+            <StepSize
+                onEffect={onStepSizeChange}
+                defaultStep={defaultStep}
+                defaultSelected={defaultSelected}
+            />
         </div>
     );
 }

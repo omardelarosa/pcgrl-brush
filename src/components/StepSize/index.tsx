@@ -6,8 +6,12 @@ import cursor25 from "../../assets/images/cursor25.png";
 
 export function StepSize({
     onEffect,
+    defaultStep,
+    defaultSelected,
 }: {
     onEffect?: (step: number, selected: number) => void;
+    defaultStep: number;
+    defaultSelected: number;
 }) {
     const [step, setStep] = useState(1);
     const [selected, setSelected] = useState(0);

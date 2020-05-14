@@ -19,6 +19,13 @@ export type SuggestionsByType = Partial<
     Record<RepresentationName, ISuggestion[] | null>
 >;
 
+export interface Checkpoint {
+    gridText: string;
+    gridSize: number[];
+    radius: number;
+    steps: number;
+}
+
 export interface AppState {
     sidebarButtons: ButtonProps[];
     toolbarButtons: ButtonProps[];
@@ -37,8 +44,9 @@ export interface AppState {
     numSteps: number;
     tileset?: string;
     playMode?: boolean;
-    gridHistory: number[][][];
-    gridHistoryCurrentIndex: number;
+    saveMode?: boolean;
+    checkpoints: Checkpoint[];
+    checkpointIndex: number;
 }
 
 export class AppStateService {
@@ -142,8 +150,9 @@ export class AppStateService {
             numSteps: DEFAULT_NUM_STEPS,
             tileset: "classic",
             playMode: false,
-            gridHistory: [],
-            gridHistoryCurrentIndex: -1, // no history
+            saveMode: false,
+            checkpoints: [],
+            checkpointIndex: -1, // no history
         };
     }
 }

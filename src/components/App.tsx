@@ -21,6 +21,7 @@ import {
     SuggestedGrids,
     SuggestionsByType,
     DEFAULT_PLAYER_POS,
+    Checkpoint,
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
@@ -36,14 +37,18 @@ import {
 import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
+    DEFAULT_STAGE_GRID_SIZE,
 } from "../services/AppState/index";
 import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
 import { Footer } from "./Footer/index";
 import { KEY_MAPPINGS } from "../constants/index";
+import { Saving } from "./Saving/index";
 
-interface AppProps {}
+interface AppProps {
+    queryState?: Checkpoint | null;
+}
 
 interface IModelResult {
     grid: number[][] | null;
@@ -71,22 +76,45 @@ export class App extends React.Component<AppProps, AppState> {
 
         // 2. Add player
         setTimeout(() => {
-            const { grid } = TensorFlowService.cloneGrid(this.state.grid);
-            const updatedGrid = this.setPlayerPosOnGrid(
-                grid,
-                null,
-                DEFAULT_PLAYER_POS
-            );
+            // Use existing checkpoint if available
+            if (this.props.queryState) {
+                const checkpoint = this.props.queryState;
+                const grid = TensorFlowService.textToGrid(checkpoint.gridText);
+                const gridSize = (checkpoint.gridSize ||
+                    DEFAULT_STAGE_GRID_SIZE) as [number, number];
+                this.setState(
+                    {
+                        grid,
+                        gridSize,
+                        numSteps: checkpoint.steps || DEFAULT_NUM_STEPS,
+                        toolRadius: checkpoint.radius || DEFAULT_TOOL_RADIUS,
+                        checkpoints: [checkpoint],
+                        checkpointIndex: 0,
+                    },
+                    () => {
+                        this.getSuggestionsFromModel(grid, gridSize);
+                    }
+                );
+                // Otherwise...
+            } else {
+                const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+                const updatedGrid = this.setPlayerPosOnGrid(
+                    grid,
+                    null,
+                    DEFAULT_PLAYER_POS
+                );
 
-            // add checkpoint
-            this.addCheckpoint(this.state.grid);
-            this.setState({
-                grid: updatedGrid,
-                numSteps: DEFAULT_NUM_STEPS,
-                toolRadius: DEFAULT_TOOL_RADIUS,
-            });
-            // 3. Update ghostLayer
-            this.updateGhostLayer(updatedGrid, this.state.gridSize);
+                // add checkpoint
+                this.addCheckpoint(updatedGrid);
+                this.setState({
+                    grid: updatedGrid,
+                    numSteps: DEFAULT_NUM_STEPS,
+                    toolRadius: DEFAULT_TOOL_RADIUS,
+                });
+
+                // 3. Update ghostLayer
+                this.updateGhostLayer(updatedGrid, this.state.gridSize);
+            }
         }, 0);
 
         window.addEventListener("keypress", this.handleKeyPress);
@@ -111,9 +139,7 @@ export class App extends React.Component<AppProps, AppState> {
                         this.movePlayer([1, 0]);
                         break;
                     case ACTIONS.RETRY:
-                        this.restoreCheckpoint(
-                            this.state.gridHistoryCurrentIndex
-                        );
+                        this.restoreCheckpoint(this.state.checkpointIndex);
                         break;
                 }
             }
@@ -218,7 +244,7 @@ export class App extends React.Component<AppProps, AppState> {
             // when re-entering edit mode...
             if (playMode === false) {
                 // Restore to the last edited state
-                this.restoreCheckpoint(this.state.gridHistoryCurrentIndex);
+                this.restoreCheckpoint(this.state.checkpointIndex);
             } else {
                 // add checkpoint during mode transition
                 this.addCheckpoint(this.state.grid);
@@ -226,9 +252,16 @@ export class App extends React.Component<AppProps, AppState> {
             // when entering play mode
         }
 
+        let saveMode = false;
+        if (p.buttonName === SidebarButtonNames.SAVE) {
+            saveMode = true;
+        }
+        // console.log("saveMode: ", saveMode);
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
             playMode,
+            saveMode,
         });
     };
 
@@ -326,38 +359,44 @@ export class App extends React.Component<AppProps, AppState> {
 
     public addCheckpoint(grid: number[][]) {
         // TODO: add support for dynamic grid sizes
-
-        let gridHistory = [...this.state.gridHistory];
+        let checkpoints = [...this.state.checkpoints];
+        // let gridHistory = [...this.state.gridHistory];
 
         // Keep track of current spot in history
-        const gridHistoryCurrentIndex = this.state.gridHistoryCurrentIndex;
-        let gridHistoryNextIndex = gridHistoryCurrentIndex + 1;
+        const currentCheckpointIndex = this.state.checkpointIndex;
+        let nextCheckpointIndex = currentCheckpointIndex + 1;
 
         while (
-            gridHistory.length >= MAX_GRID_HISTORY_LENGTH ||
-            gridHistoryCurrentIndex < gridHistory.length - 1
+            checkpoints.length >= MAX_GRID_HISTORY_LENGTH ||
+            currentCheckpointIndex < checkpoints.length - 1
         ) {
-            gridHistory.shift();
-            gridHistoryNextIndex--; // decrement pointer, since list is getting shorter
+            checkpoints.shift();
+            nextCheckpointIndex--; // decrement pointer, since list is getting shorter
         }
 
+        // const grid = this.state.grid;
+
+        const checkpoint: Checkpoint = {
+            gridText: TensorFlowService.gridToText(grid),
+            gridSize: this.state.gridSize,
+            radius: this.state.toolRadius,
+            steps: this.state.numSteps,
+        };
+
         // Add new grid
-        gridHistory.push(grid);
+        checkpoints.push(checkpoint);
 
-        const a: number[][] | undefined = gridHistory[gridHistoryCurrentIndex];
-        const b: number[][] | undefined = gridHistory[gridHistoryNextIndex];
+        const a: Checkpoint | undefined = checkpoints[currentCheckpointIndex];
+        const b: Checkpoint | undefined = checkpoints[nextCheckpointIndex];
 
-        // Don't add redundant checkpoints
-        if (a && b) {
-            const diffs = diffGrids(a, b, this.state.gridSize);
-            if (!diffs.length) {
-                return;
-            }
+        // Diff and avoid adding redundant checkpoints
+        if (JSON.stringify(a) === JSON.stringify(b)) {
+            return;
         }
 
         this.setState({
-            gridHistory,
-            gridHistoryCurrentIndex: gridHistoryNextIndex,
+            checkpoints,
+            checkpointIndex: nextCheckpointIndex,
         });
     }
 
@@ -367,26 +406,33 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
-        if (idx >= this.state.gridHistory.length) {
+        if (idx >= this.state.checkpoints.length) {
             console.log("Too far forward...");
             return;
         }
 
-        const nextGrid: number[][] = this.state.gridHistory[idx];
-        this.setState(
-            {
-                grid: this.state.gridHistory[idx],
-                gridHistoryCurrentIndex: idx,
-                suggestedGrids: {
-                    ...EMPTY_SUGGESTED_GRIDS,
+        const checkpoint: Checkpoint = this.state.checkpoints[idx];
+        if (checkpoint) {
+            const nextGrid: number[][] = TensorFlowService.textToGrid(
+                checkpoint.gridText
+            );
+            this.setState(
+                {
+                    grid: nextGrid,
+                    checkpointIndex: idx,
+                    toolRadius: Number(checkpoint.radius),
+                    numSteps: Number(checkpoint.steps),
+                    suggestedGrids: {
+                        ...EMPTY_SUGGESTED_GRIDS,
+                    },
+                    pendingSuggestions: null,
                 },
-                pendingSuggestions: null,
-            },
-            () => {
-                // TODO: safely get suggestions for new grid...
-                this.getSuggestionsFromModel(nextGrid, this.state.gridSize);
-            }
-        );
+                () => {
+                    // TODO: safely get suggestions for new grid...
+                    this.getSuggestionsFromModel(nextGrid, this.state.gridSize);
+                }
+            );
+        }
     }
 
     public activateCell(row: number, col: number, data: number): void {
@@ -589,7 +635,7 @@ export class App extends React.Component<AppProps, AppState> {
 
     public handleUndoRedo = (direction: number) => {
         // console.log("direction: ", direction);
-        this.restoreCheckpoint(this.state.gridHistoryCurrentIndex + direction);
+        this.restoreCheckpoint(this.state.checkpointIndex + direction);
     };
 
     public updateToolRadius = (step: number, radius: number): void => {
@@ -898,11 +944,16 @@ export class App extends React.Component<AppProps, AppState> {
                                 gridSize={this.state.gridSize}
                                 onUpdateGridSize={this.onUpdateGridSize}
                                 onStepSizeChange={this.updateToolRadius}
+                                defaultSelected={this.state.toolRadius}
+                                defaultStep={this.state.numSteps}
                             />
                         </div>,
                     ]}
                     center={[
-                        <div className="sidebar-container">
+                        <div
+                            className="sidebar-container"
+                            key="sidebar_container1"
+                        >
                             <Sidebar
                                 buttons={this.state.sidebarButtons.map((b) => ({
                                     ...b,
@@ -913,14 +964,45 @@ export class App extends React.Component<AppProps, AppState> {
                                 }))}
                             />
                         </div>,
-                        <div className="stage-container">
-                            {!this.state.playMode && (
+                        this.state.saveMode ? (
+                            <div
+                                className="stage-container"
+                                key="stage_container1"
+                            >
+                                <Saving
+                                    checkpoints={this.state.checkpoints}
+                                    checkpointIndex={this.state.checkpointIndex}
+                                />
+                            </div>
+                        ) : (
+                            <div className="stage-container">
+                                {!this.state.playMode && (
+                                    <Stage
+                                        grids={{
+                                            ...this.state.suggestedGrids,
+                                        }}
+                                        vertical={false}
+                                        classSuffix="suggestions-stage"
+                                        onGridClick={this.onGridClick}
+                                        onGridUnClick={this.onGridUnClick}
+                                        onCellMouseOver={this.onCellMouseOver}
+                                        onCellMouseDown={this.onCellClick}
+                                        onCellClick={this.onCellClick}
+                                        onGhostGridClick={
+                                            this.acceptGhostSuggestions
+                                        }
+                                        pendingSuggestions={
+                                            this.state.pendingSuggestions
+                                        }
+                                    />
+                                )}
                                 <Stage
-                                    grids={{
-                                        ...this.state.suggestedGrids,
-                                    }}
-                                    vertical={false}
-                                    classSuffix="suggestions-stage"
+                                    grids={
+                                        {
+                                            user: this.state.grid as number[][],
+                                        } as SuggestedGrids
+                                    }
+                                    classSuffix="user-stage"
                                     onGridClick={this.onGridClick}
                                     onGridUnClick={this.onGridUnClick}
                                     onCellMouseOver={this.onCellMouseOver}
@@ -930,34 +1012,18 @@ export class App extends React.Component<AppProps, AppState> {
                                         this.acceptGhostSuggestions
                                     }
                                     pendingSuggestions={
-                                        this.state.pendingSuggestions
+                                        this.state.playMode
+                                            ? null
+                                            : this.state.pendingSuggestions
                                     }
                                 />
-                            )}
-                            <Stage
-                                grids={
-                                    {
-                                        user: this.state.grid as number[][],
-                                    } as SuggestedGrids
-                                }
-                                classSuffix="user-stage"
-                                onGridClick={this.onGridClick}
-                                onGridUnClick={this.onGridUnClick}
-                                onCellMouseOver={this.onCellMouseOver}
-                                onCellMouseDown={this.onCellClick}
-                                onCellClick={this.onCellClick}
-                                onGhostGridClick={this.acceptGhostSuggestions}
-                                pendingSuggestions={
-                                    this.state.playMode
-                                        ? null
-                                        : this.state.pendingSuggestions
-                                }
-                            />
-                        </div>,
-                        this.state.playMode ? (
-                            <div />
-                        ) : (
-                            <div className="tileset-container">
+                            </div>
+                        ),
+                        this.state.playMode ? null : (
+                            <div
+                                className="tileset-container"
+                                key="tileset_container1"
+                            >
                                 <Tileset
                                     buttons={this.state.tilesetButtons.map(
                                         (b) => ({

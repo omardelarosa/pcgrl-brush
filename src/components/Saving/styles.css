@@ -1,0 +1,15 @@
+.saving-container {
+    height: 100%;
+}
+
+.saving-container .text-grid {
+    height: 50%;
+    max-height: 200px;
+    width: 50%;
+    max-width: 300px;
+    margin: 0 auto 0 auto;
+    background-color: white;
+    overflow-x: scroll;
+    font-family: "Courier New", Courier, monospace;
+    font-weight: 800;
+}

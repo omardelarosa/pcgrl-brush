@@ -16,3 +16,11 @@ export const TILES_TO_CHAR: Record<TILES, string> = {
     [TILES.CRATE]: "$",
     [TILES.TARGET]: ".",
 };
+
+export const CHAR_TO_TILE: Record<string, TILES> = {
+    " ": TILES.EMPTY,
+    "#": TILES.SOLID,
+    "@": TILES.PLAYER,
+    $: TILES.CRATE,
+    ".": TILES.TARGET,
+};

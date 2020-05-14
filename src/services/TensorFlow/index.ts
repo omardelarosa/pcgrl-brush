@@ -2,7 +2,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
-import { TILES, TILES_TO_CHAR } from "../../constants/tiles";
+import { TILES, TILES_TO_CHAR, CHAR_TO_TILE } from "../../constants/tiles";
 import { isEmpty, argSort } from "../Utils/index";
 
 // Testing basic functionality of tensorflow using code from:
@@ -115,7 +115,7 @@ export class TensorFlowService {
         if (isEmpty(grid) || !grid) return "";
 
         // 2. Check for sum of 0
-        const t = tf.tensor2d(grid);
+        const t = tf.tensor2d(grid).transpose();
         const paddedArrStr = t
             .pad(
                 [
@@ -136,9 +136,33 @@ export class TensorFlowService {
             }
             result += s;
         }
-        console.log("gridToText:");
-        console.log(result);
         return result;
+    }
+
+    public static textToGrid(s: string): number[][] {
+        const rowsStrings = s.split("\n");
+        const matrix: number[][] = [];
+        for (let i = 0; i < rowsStrings.length; i++) {
+            const rowChars = rowsStrings[i];
+            const row = [];
+            for (let j = 0; j < rowChars.length; j++) {
+                const c = rowChars[j];
+                const tile = CHAR_TO_TILE[c];
+                row.push(tile);
+            }
+            matrix.push(row);
+        }
+
+        const t = tf
+            .tensor2d(matrix)
+            // Transpose since idxs in code are inverted relative to view rendering.
+            .transpose()
+            // Remove walls/padding
+            .pad([
+                [-1, -1],
+                [-1, -1],
+            ]);
+        return t.arraySync() as number[][];
     }
 
     public createGrameGrid(size: [number, number]): IGrid {
