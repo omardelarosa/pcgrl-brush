@@ -7,3 +7,12 @@ export enum TILES {
 }
 
 export const CENTER_TILE_POS = [2, 2];
+
+// This is for building sokoban level text files.
+export const TILES_TO_CHAR: Record<TILES, string> = {
+    [TILES.EMPTY]: " ",
+    [TILES.SOLID]: "#",
+    [TILES.PLAYER]: "@",
+    [TILES.CRATE]: "$",
+    [TILES.TARGET]: ".",
+};

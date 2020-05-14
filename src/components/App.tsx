@@ -37,7 +37,6 @@ import {
 import _ from "lodash";
 import { diffGrids } from "../services/Utils/index";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
-import { LoadingIndicator } from "./LoadingIndicator";
 import { Footer } from "./Footer/index";
 
 interface AppProps {}

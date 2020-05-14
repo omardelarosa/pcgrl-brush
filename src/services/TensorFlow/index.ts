@@ -2,7 +2,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
-import { TILES } from "../../constants/tiles";
+import { TILES, TILES_TO_CHAR } from "../../constants/tiles";
 import { isEmpty, argSort } from "../Utils/index";
 
 // Testing basic functionality of tensorflow using code from:
@@ -110,6 +110,37 @@ export class TensorFlowService {
         return sum === 0;
     }
 
+    public static gridToText(grid?: number[][] | null): string {
+        // 1. Test for object emptiness
+        if (isEmpty(grid) || !grid) return "";
+
+        // 2. Check for sum of 0
+        const t = tf.tensor2d(grid);
+        const paddedArrStr = t
+            .pad(
+                [
+                    [1, 1],
+                    [1, 1],
+                ],
+                TILES.SOLID as number
+            )
+            .toString();
+        let str = paddedArrStr.replace(/(\],\s)/gi, "N");
+        str = str.replace(/,|\s|\]|\[|Tensor/gi, "");
+        let result = "";
+        // replace each char with the correct character from mapping
+        for (let i = 0; i < str.length; i++) {
+            let s = TILES_TO_CHAR[Number(str[i]) as TILES] || str[i];
+            if (s === "N") {
+                s = "\n"; // special case of newline
+            }
+            result += s;
+        }
+        console.log("gridToText:");
+        console.log(result);
+        return result;
+    }
+
     public createGrameGrid(size: [number, number]): IGrid {
         return TensorFlowService.createGameGrid(size);
     }
@@ -148,12 +179,12 @@ export class TensorFlowService {
 
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
+        const baseUrl = `${window.location.protocol}//${window.location.host}`;
         for (let key in MODEL_URLS) {
             let model: any = this.models[key as RepresentationName];
             if (typeof model !== "undefined") {
-                const url =
-                    window.location.href.split("src")[0] +
-                    MODEL_URLS[key as RepresentationName];
+                const modelPath = `${MODEL_URLS[key as RepresentationName]}`;
+                const url = `${baseUrl}${modelPath}`;
                 console.log("url: ", key, url);
                 model = await tf.loadGraphModel(url);
                 console.log("Loaded model: ", model);
