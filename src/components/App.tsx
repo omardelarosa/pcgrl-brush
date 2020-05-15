@@ -149,7 +149,7 @@ export class App extends React.Component<AppProps, AppState> {
                         this.movePlayer([1, 0], action);
                         break;
                     case ACTIONS.RETRY:
-                        this.gameService.resetActions();
+                        this.gameService.reset();
                         this.restoreCheckpoint(this.state.checkpointIndex);
                         break;
                 }

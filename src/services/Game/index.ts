@@ -20,6 +20,8 @@ export interface GameAction {
 export class GameService {
     private game: Games;
     public actions: GameAction[];
+    public hasWon: boolean = false;
+
     constructor(game: Games) {
         this.game = game;
         this.actions = [];
@@ -37,6 +39,10 @@ export class GameService {
          *
          */
         if (this.game === Games.SOKOBAN) {
+            // Prevent further moves after winning
+            if (this.hasWon) {
+                return;
+            }
             const pos = this.getPlayerPosFromGrid(grid, gridSize);
             // console.log("direction:", direction, playerPos);
             let nextGrid = null;
@@ -108,6 +114,16 @@ export class GameService {
 
                 // console.log("move:", direction, "next_grid: ", nextGrid);
                 this.actions.push({ name: "move", value: direction, action });
+
+                const hasWon = this.didWin(nextGrid, gridSize);
+                if (hasWon) {
+                    this.actions.push({
+                        name: "win",
+                        value: null,
+                        action: ACTIONS.WIN,
+                    });
+                    this.hasWon = true;
+                }
                 // TODO: log player action, maybe checkpoint
                 return nextGrid;
             }
@@ -260,8 +276,52 @@ export class GameService {
         return null;
     }
 
-    public resetActions() {
+    public reset() {
         // TODO: keep track of "best?"
         this.actions = [];
+        this.hasWon = false;
+    }
+
+    public didWin(
+        grid: number[][],
+        gridSize: number[] | [number, number]
+    ): boolean {
+        if (this.game === Games.SOKOBAN) {
+            let numTargetsCovered = 0;
+            let numCrates = 0;
+            let numTargets = 0;
+            let numPlayers = 0;
+            for (let i = 0; i < gridSize[0]; i++) {
+                for (let j = 0; j < gridSize[1]; j++) {
+                    const tile = grid[i][j];
+                    if (tile === TILES.CRATE) {
+                        numCrates += 1;
+                    } else if (tile === TILES.TARGET) {
+                        numTargets += 1;
+                    } else if (tile === TILES.PLAYER) {
+                        numPlayers += 1;
+                    } else if (tile === MULTITILE_PLAYER_TARGET) {
+                        numPlayers += 1;
+                        numTargets += 1;
+                    } else if (tile === MULTITILE_CRATE_TARGET) {
+                        numTargetsCovered += 1;
+                    }
+                }
+            }
+
+            // Win conditions
+            return (
+                numPlayers === 1 &&
+                numTargetsCovered > 0 &&
+                numCrates === 0 &&
+                numTargets === 0
+            );
+        }
+
+        if (this.game === Games.ZELDA) {
+            // TODO...
+            return false;
+        }
+        return false;
     }
 }

@@ -24,6 +24,7 @@ export enum ACTIONS {
     MOVE_LEFT,
     MOVE_RIGHT,
     RETRY,
+    WIN,
 }
 
 export const KEY_MAPPINGS = {
@@ -49,6 +50,7 @@ export const ACTIONS_TO_SYMBOLS = {
     [ACTIONS.MOVE_LEFT]: "⬅️",
     [ACTIONS.MOVE_RIGHT]: "➡️",
     [ACTIONS.RETRY]: "⎌",
+    [ACTIONS.WIN]: "🏆",
 };
 
 export type ValidKeysType = "KeyA" | "KeyW" | "KeyS" | "KeyD" | "KeyR";
