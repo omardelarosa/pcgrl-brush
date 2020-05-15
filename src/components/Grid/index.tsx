@@ -126,6 +126,10 @@ export class Grid extends React.Component<GridProps, GridState> {
             cellSize = [cellPx, cellPx];
         }
 
+        // NOTE: user grid can never be "empty" since user might want to have all empty tiles.
+        const isEmptyMatrix =
+            gridLabel !== "user" && TensorFlowService.isEmptyGrid(matrix);
+
         return (
             <div className="grid-wrapper">
                 <div
@@ -134,13 +138,15 @@ export class Grid extends React.Component<GridProps, GridState> {
                     onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {!TensorFlowService.isEmptyGrid(matrix) && matrix ? (
+                    {!isEmptyMatrix && matrix ? (
                         [
-                            <WallRow matrix={matrix} />,
+                            <WallRow matrix={matrix} key="wall-row1" />,
                             ...matrix.map((rowItems, rowIdx) => (
                                 <GridRow key={`row_${rowIdx}`}>
                                     {[
-                                        <OuterWall />,
+                                        <OuterWall
+                                            key={`outer-wall-${rowIdx}-1`}
+                                        />,
                                         ...rowItems.map((item, colIdx) => {
                                             return (
                                                 <GridCell
@@ -168,11 +174,13 @@ export class Grid extends React.Component<GridProps, GridState> {
                                                 />
                                             );
                                         }),
-                                        <OuterWall />,
+                                        <OuterWall
+                                            key={`outer-wall-${rowIdx}-2`}
+                                        />,
                                     ]}
                                 </GridRow>
                             )),
-                            <WallRow matrix={matrix} />,
+                            <WallRow matrix={matrix} key="wall-row2" />,
                         ]
                     ) : (
                         <LoadingIndicator />

@@ -1,12 +1,17 @@
-import * as querystring from "querystring";
 import { Checkpoint } from "../AppState";
 
 export class QueryService {
     public static initState(): Checkpoint | null {
         const hashedCheckpoint = window.location.hash.slice(1);
         const checkpoint = QueryService.decode(hashedCheckpoint);
-        console.log("loading previous checkpoint state: ", checkpoint);
-        // window.location.hash = ""; // hash rewrite?
+
+        if (checkpoint) {
+            console.log("loading previous checkpoint state: ", checkpoint);
+        } else {
+            console.warn("unable to reload hashed state: ", hashedCheckpoint);
+        }
+
+        window.location.hash = ""; // hash rewrite?
         return checkpoint;
     }
 

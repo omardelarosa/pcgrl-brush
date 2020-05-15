@@ -12,7 +12,6 @@ import {
     TensorFlowService,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
-    IPredictionResult,
     ISuggestion,
 } from "../services/TensorFlow";
 import {
@@ -39,8 +38,6 @@ import {
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
 } from "../services/AppState";
-import _ from "lodash";
-import { diffGrids } from "../services/Utils";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow";
 import { Footer } from "./Footer";
 import { KEY_MAPPINGS } from "../constants";
@@ -52,7 +49,7 @@ interface AppProps {
     queryState?: Checkpoint | null;
 }
 
-interface IModelResult {
+export interface IModelResult {
     grid: number[][] | null;
     repName: any;
     pendingSuggestions: ISuggestion[];
@@ -67,7 +64,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
 
-        // Hacky way to debug
+        // Attaches services to window object for debugging.
         (window as any).__PCGRL = {
             tf: this.tfService,
             gs: this.gameService,
@@ -79,12 +76,12 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public onInit(): void {
-        // 1. Set to Narrow
+        // 1. Set to Narrow by default
         this.setState({
             currentRepresentation: "narrow",
         });
 
-        // 2. Add player
+        // 2. Add player, etc on next tick
         setTimeout(() => {
             // Use existing checkpoint if available
             if (this.props.queryState) {
@@ -108,6 +105,8 @@ export class App extends React.Component<AppProps, AppState> {
                 // Otherwise...
             } else {
                 const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+
+                // Add a player by default
                 const updatedGrid = this.setPlayerPosOnGrid(
                     grid,
                     null,
@@ -127,10 +126,26 @@ export class App extends React.Component<AppProps, AppState> {
             }
         }, 0);
 
-        window.addEventListener("keypress", this.handleKeyPress);
+        this.attachEventListeners();
     }
 
+    public componentWillUnmount() {
+        // Clean up...
+        this.detachEventListeners();
+    }
+
+    public attachEventListeners = () => {
+        // Attach global event listener..
+        window.addEventListener("keypress", this.handleKeyPress);
+    };
+
+    public detachEventListeners = () => {
+        // Detach global event listener..
+        window.removeEventListener("keypress", this.handleKeyPress);
+    };
+
     public handleKeyPress = (ev: KeyboardEvent) => {
+        // TODO: make this game agnostic...
         if (this.state.playMode) {
             if (ev.code in KEY_MAPPINGS.codes_to_actions) {
                 const action: ACTIONS =
@@ -157,6 +172,12 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
+    /**
+     * Delegates to game service and updates state accordingly.
+     *
+     * @param direction
+     * @param action
+     */
     public movePlayer(direction: number[], action: ACTIONS) {
         const nextGrid = this.gameService.movePlayer(
             direction,
@@ -167,22 +188,6 @@ export class App extends React.Component<AppProps, AppState> {
         if (nextGrid) {
             this.setState({ grid: nextGrid });
         }
-    }
-
-    public isTargetPosition(pos: [number, number]) {
-        if (
-            pos[0] >= 0 &&
-            pos[1] >= 0 &&
-            pos[0] < this.state.gridSize[0] &&
-            pos[1] < this.state.gridSize[1]
-        ) {
-            const currentTile = this.state.grid[pos[0]][pos[1]];
-            if (currentTile === TILES.TARGET) {
-                return true;
-            }
-            return false;
-        }
-        return false;
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
@@ -278,18 +283,22 @@ export class App extends React.Component<AppProps, AppState> {
         return this.gameService.getPlayerPosFromGrid(grid, this.state.gridSize);
     }
 
-    public applyUpdateToGrid(
+    /**
+     * Bound instance of grid mutator.  Must be bound to component in order
+     * to properly access the game service instance from TF service.
+     */
+    public applyUpdateToGrid = (
         grid: number[][],
         pos: [number, number],
         tile: number
-    ): number[][] {
+    ): number[][] => {
         return this.gameService.applyUpdateToGrid(
             grid,
             pos,
             tile,
             this.state.gridSize
         );
-    }
+    };
 
     public addCheckpoint(grid: number[][]) {
         // TODO: add support for dynamic grid sizes
@@ -415,31 +424,32 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public clearStage() {
-        const { grid: nextGrid } = TensorFlowService.createGameGrid(
-            this.state.gridSize
-        );
+        const nextGrid = this.gameService.clearGrid(this.state.gridSize);
 
         // add checkpoint
         this.addCheckpoint(this.state.grid);
-
-        this.setState({
-            grid: nextGrid,
-            playerPos: DEFAULT_PLAYER_POS,
-        });
-
-        this.updateGhostLayer(nextGrid, this.state.gridSize);
+        this.setState(
+            {
+                grid: nextGrid,
+            },
+            () => {
+                this.updateGhostLayer(nextGrid, this.state.gridSize);
+            }
+        );
     }
 
+    /**
+     * Delegates to game service to all for game-specific implementations later.
+     * @param grid
+     * @param currentPos
+     * @param nextPos
+     */
     public setPlayerPosOnGrid(
         grid: number[][],
         currentPos: [number, number] | null,
         nextPos: [number, number]
     ): number[][] {
-        if (currentPos) {
-            grid[currentPos[0]][currentPos[1]] = TILES.EMPTY; // remove from prev
-        }
-        grid[nextPos[0]][nextPos[1]] = TILES.PLAYER; // add next
-        return grid;
+        return this.gameService.setPlayerPosOnGrid(grid, currentPos, nextPos);
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
@@ -454,72 +464,18 @@ export class App extends React.Component<AppProps, AppState> {
      *
      * Aggregate all recommendations into a single virtual grid.
      *
+     * Delegates to TF service
+     *
      */
     public generateMajorityVoteGrid(
         pendingSuggestions: SuggestionsByType | null,
         currentGrid: number[][]
     ): { grid: number[][]; pendingSuggestions: ISuggestion[] | null } | null {
-        const hashMapOfVotes: Record<string, number> = {};
-        const minVotesForMajority = 2; // 2/3 agents is considered majority
-        if (pendingSuggestions === null) {
-            return null;
-        }
-        // 1. Iterate over all agents/representation names' suggestions
-        REPRESENTATION_NAMES.forEach((repName) => {
-            if (typeof repName === "undefined") {
-                return;
-            }
-            const key: RepresentationName = repName;
-            const suggestions: ISuggestion[] | null =
-                pendingSuggestions[key!] || null;
-            if (suggestions !== null) {
-                suggestions!.forEach((s: ISuggestion) => {
-                    const stringifiedSuggestion = `${s.pos}_${s.tile}`;
-                    if (!hashMapOfVotes[stringifiedSuggestion]) {
-                        hashMapOfVotes[stringifiedSuggestion] = 0;
-                    }
-                    hashMapOfVotes[stringifiedSuggestion] += 1;
-                });
-            }
-        });
-
-        // 2. Tally votes for overlap
-        const majoritySuggestions = [];
-        for (let key in hashMapOfVotes) {
-            if (hashMapOfVotes[key] >= minVotesForMajority) {
-                const [posStr, tileStr] = key.split("_");
-                const pos = posStr.split(",").map(Number) as [number, number];
-                const tile = Number(tileStr);
-                majoritySuggestions.push({
-                    pos,
-                    tile,
-                });
-            }
-        }
-
-        // 3. Case 1 - No agreement, return null
-        if (!majoritySuggestions.length) {
-            return null;
-        }
-
-        // 3. Case 2 - Some agreement exists...
-        let suggestedGrid = currentGrid;
-
-        // 4. Apply suggestions to grid.
-        majoritySuggestions.forEach((suggestion: ISuggestion) => {
-            suggestedGrid = this.applyUpdateToGrid(
-                suggestedGrid,
-                suggestion.pos,
-                // pos, // use current neighborhood pos
-                suggestion.tile
-            );
-        });
-
-        // 5. Return data for rendering
-        return {
-            grid: suggestedGrid,
-            pendingSuggestions: majoritySuggestions,
-        };
+        return this.tfService.generateMajorityVoteGrid(
+            pendingSuggestions,
+            currentGrid,
+            this.applyUpdateToGrid
+        );
     }
 
     public acceptGhostSuggestions = (
@@ -626,201 +582,59 @@ export class App extends React.Component<AppProps, AppState> {
 
         const currentGrid = nextGrid;
 
-        // console.log(`Processing state using ${currentRepName} model`);
-
-        const fn = async (
-            steps: number,
-            repName: RepresentationName
-        ): Promise<IModelResult> => {
-            // console.log("START: repName: ", repName);
-            // // uncomment to debug
-            // Keep track of all mutations
-            const suggestedGridStack = [currentGrid];
-
-            // This doesn't matter for wide.
-            let neighborhoodPositions = [];
-
-            // Use relative position for non-wide
-            if (repName !== "wide") {
-                neighborhoodPositions = this.tfService.getNeighbors(
-                    clickedTile,
-                    this.state.gridSize,
-                    this.state.toolRadius
-                );
-            } else {
-                // Just repeat clicked position over and over for wide.
-                for (let i = 0; i < steps; i++) {
-                    neighborhoodPositions.push(clickedTile);
-                }
-            }
-
-            // console.log("neighbors: ", neighborhoodPositions);
-            // For
-            // const iters = repName !== 'wide' ? neighborhoodPositions.length : NUMBER_OF_SUGGESTIONS_IN_WIDE;
-            const iters = neighborhoodPositions.length;
-
-            // For each position in neighborhood...
-            for (let p = 0; p < iters; p++) {
-                const pos = neighborhoodPositions[p];
-                const suggestedGrid = suggestedGridStack[p];
-                if (!suggestedGrid) {
-                    console.log("grids", suggestedGridStack, p, repName);
-                    throw new Error("Missing grid!");
-                }
-
-                // Skip invalid positions
-                if (pos === null) {
-                    suggestedGridStack.push(suggestedGrid);
-                    continue;
-                }
-
-                // console.log("pos: ", pos);
-                // Keep generating new grids based on suggestions
-                const suggestionsApplied: ISuggestion[] = [];
-                for (let i = 0; i < steps; i++) {
-                    const {
-                        suggestions,
-                    }: IPredictionResult = await this.tfService.predictAndDraw(
-                        suggestedGrid,
-                        this.state.gridSize,
-                        repName!,
-                        pos,
-                        this.state.toolRadius
-                    );
-                    // For debugging -- uncomment
-                    // console.log("step: ", p, i, "pos: ", pos);
-                    if (suggestions) {
-                        // const numSuggestions = suggestions.length;
-                        let numSuggestions = 1;
-                        // When using wide, steps means the number of tiles to consider
-                        if (repName === "wide") {
-                            numSuggestions = steps;
-                        }
-                        for (let j = 0; j < numSuggestions; j++) {
-                            const suggestion: ISuggestion | null =
-                                suggestions[j];
-                            suggestionsApplied.push(suggestion);
-                            if (suggestion) {
-                                const nextSuggestedGrid = this.applyUpdateToGrid(
-                                    suggestedGrid,
-                                    suggestion.pos,
-                                    // pos, // use current neighborhood pos
-                                    suggestion.tile
-                                );
-
-                                /**
-                                 * Handle 'turtle' agent which returns a direction
-                                 */
-                                const direction = suggestion.direction;
-                                // When a direction is given...
-                                if (direction) {
-                                    // recompute neighbors by shifting in direction
-                                    const updatedNeighborhoodPositions = this.tfService.getNeighbors(
-                                        [
-                                            clickedTile[0] + direction[0],
-                                            clickedTile[1] + direction[1],
-                                        ],
-                                        this.state.gridSize,
-                                        this.state.toolRadius
-                                    );
-
-                                    // Change neighborhood positions to match
-                                    updatedNeighborhoodPositions.forEach(
-                                        (nextPos, idx) => {
-                                            neighborhoodPositions[
-                                                idx
-                                            ] = nextPos;
-                                        }
-                                    );
-                                }
-
-                                suggestedGridStack.push(nextSuggestedGrid);
-                            }
-                        }
-                    } else {
-                        // When there are no suggestions, terminate loop
-                        break;
-                    }
-                }
-                // console.log("suggestions_applied:", suggestionsApplied);
-            }
-
-            // Save the suggestion in the state update
-            const nextGrid: number[][] | null =
-                _.last(suggestedGridStack) || null;
-            // console.log("END: repName: ", repName);
-            // console.log("SuggestedGridStack:", suggestedGridStack);
-            const pendingSuggestions: ISuggestion[] = [];
-            // Aggregate all the suggestions from the loop above by diffing
-            // current grid and last suggested grid.
-            if (nextGrid) {
-                const diffs = diffGrids(
-                    currentGrid,
-                    nextGrid,
-                    this.state.gridSize
-                );
-                diffs.forEach((diff) => {
-                    const suggestion: ISuggestion = {
-                        pos: diff.pos,
-                        tile: diff.b,
-                    };
-                    pendingSuggestions.push(suggestion);
-                });
-            }
-
-            // console.log("pending_suggestions:", pendingSuggestions);
-
-            return {
-                grid: nextGrid,
-                repName,
-                pendingSuggestions,
-            };
-        };
-
-        // Invoke async anon function -- a trick to do an async/await loop
-        Promise.all(
-            REPRESENTATION_NAMES.map((repName) =>
-                fn(this.state.numSteps, repName)
+        // 1. Generate suggestions from TF service, asynchronously...
+        this.tfService
+            .generateModelSuggestions(
+                nextGrid,
+                currentRepName,
+                nextSize,
+                this.state.toolRadius,
+                this.state.numSteps,
+                clickedTile,
+                this.applyUpdateToGrid
             )
-        ).then((results) => {
-            // Save the suggestion in the state update
-            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
-            const pendingSuggestions = {} as any;
-            results.forEach((result: any) => {
-                if (result) {
-                    const key = result.repName as RepresentationName;
-                    if (typeof key !== "undefined" && key !== null) {
-                        suggestedGrids[key] = result.grid;
-                        pendingSuggestions[key] = result.pendingSuggestions;
+            .then((results) => {
+                // 2. Process model results and apply data changes in component.
+
+                // Save the suggestion in the state update
+                const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
+                const pendingSuggestions = {} as any;
+                results.forEach((result: any) => {
+                    if (result) {
+                        const key = result.repName as RepresentationName;
+                        if (typeof key !== "undefined" && key !== null) {
+                            suggestedGrids[key] = result.grid;
+                            pendingSuggestions[key] = result.pendingSuggestions;
+                        }
                     }
+                });
+                // console.log("pending_suggestions:", pendingSuggestions);
+
+                const majorityVoteData = this.generateMajorityVoteGrid(
+                    pendingSuggestions,
+                    currentGrid
+                );
+                if (majorityVoteData) {
+                    suggestedGrids["majority"] = majorityVoteData.grid;
+                    pendingSuggestions["majority"] =
+                        majorityVoteData.pendingSuggestions;
+                    pendingSuggestions["user"] =
+                        majorityVoteData.pendingSuggestions;
+                } else {
+                    suggestedGrids["majority"] = currentGrid;
+                    pendingSuggestions["majority"] = [];
                 }
+
+                // Update the UI state based on the suggested grids, etc.
+                this.setState({
+                    suggestedGrids,
+                    // Add an array of pending suggestions to state
+                    pendingSuggestions,
+                });
             });
-            // console.log("pending_suggestions:", pendingSuggestions);
-
-            const majorityVoteData = this.generateMajorityVoteGrid(
-                pendingSuggestions,
-                currentGrid
-            );
-            if (majorityVoteData) {
-                suggestedGrids["majority"] = majorityVoteData.grid;
-                pendingSuggestions["majority"] =
-                    majorityVoteData.pendingSuggestions;
-                pendingSuggestions["user"] =
-                    majorityVoteData.pendingSuggestions;
-            } else {
-                suggestedGrids["majority"] = currentGrid;
-                pendingSuggestions["majority"] = [];
-            }
-
-            // console.log("majority", majorityVoteData);
-
-            // Update the UI state based on the suggested grids, etc.
-            this.setState({
-                suggestedGrids,
-                // Add an array of pending suggestions to state
-                pendingSuggestions,
-            });
-        });
+        // .catch((err) => {
+        //     console.warn("error generating suggestions: ", err);
+        // });
     }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
     public updateGhostLayer = (
@@ -861,10 +675,13 @@ export class App extends React.Component<AppProps, AppState> {
             >
                 <Layout
                     header={[
-                        <div className="logo-container">
+                        <div className="logo-container" key="logo-container">
                             <Logo />
                         </div>,
-                        <div className="toolbar-container">
+                        <div
+                            className="toolbar-container"
+                            key="toolbar-container"
+                        >
                             <Toolbar
                                 playMode={this.state.playMode}
                                 buttons={this.state.toolbarButtons.map((b) => ({
@@ -909,7 +726,10 @@ export class App extends React.Component<AppProps, AppState> {
                                 />
                             </div>
                         ) : (
-                            <div className="stage-container">
+                            <div
+                                className="stage-container"
+                                key="stage_container2"
+                            >
                                 {!this.state.playMode ? (
                                     <Stage
                                         grids={{
@@ -928,6 +748,7 @@ export class App extends React.Component<AppProps, AppState> {
                                         pendingSuggestions={
                                             this.state.pendingSuggestions
                                         }
+                                        playMode={this.state.playMode}
                                     />
                                 ) : (
                                     <GameActionViewer
@@ -954,6 +775,7 @@ export class App extends React.Component<AppProps, AppState> {
                                             ? null
                                             : this.state.pendingSuggestions
                                     }
+                                    playMode={this.state.playMode}
                                 />
                             </div>
                         ),
@@ -980,7 +802,10 @@ export class App extends React.Component<AppProps, AppState> {
                         ),
                     ]}
                     footer={[
-                        <div className="footer-stage-wrapper">
+                        <div
+                            className="footer-stage-wrapper"
+                            key="footer-stage-wrapper"
+                        >
                             <Footer />
                         </div>,
                     ]}

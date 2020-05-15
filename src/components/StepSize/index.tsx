@@ -33,7 +33,7 @@ export function StepSize({
                     max="25"
                     className="slider"
                     value={step}
-                    onInput={updateSize}
+                    onChange={updateSize}
                 ></input>
                 {step}
             </div>

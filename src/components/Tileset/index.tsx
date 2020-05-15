@@ -18,6 +18,7 @@ export function Tileset(props: TilesetProps) {
                 <hr></hr>
                 {tilesets.map((t) => (
                     <button
+                        key={`tile-button-${t}`}
                         className="tileset-toggle"
                         onClick={() => onTileSetChange(t)}
                     >
