@@ -58,7 +58,7 @@ function GridCell({
         <div
             className={[
                 "grid-cell",
-                typeof data !== "undefined" ? `t${data}` : "",
+                typeof data !== "undefined" ? `t${data % 10}` : "",
                 isHighlighted ? "grid-cell__highlighted" : "",
             ].join(" ")}
             /* style={{

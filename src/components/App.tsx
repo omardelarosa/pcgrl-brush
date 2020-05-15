@@ -38,13 +38,14 @@ import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
-} from "../services/AppState/index";
+} from "../services/AppState";
 import _ from "lodash";
-import { diffGrids } from "../services/Utils/index";
-import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
-import { Footer } from "./Footer/index";
-import { KEY_MAPPINGS } from "../constants/index";
-import { Saving } from "./Saving/index";
+import { diffGrids } from "../services/Utils";
+import { REPRESENTATION_NAMES } from "../services/TensorFlow";
+import { Footer } from "./Footer";
+import { KEY_MAPPINGS } from "../constants";
+import { Saving } from "./Saving";
+import { GameService, Games } from "../services/Game";
 
 interface AppProps {
     queryState?: Checkpoint | null;
@@ -57,11 +58,13 @@ interface IModelResult {
 }
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
+    private gameService: GameService;
 
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
+        this.gameService = new GameService(Games.SOKOBAN);
     }
 
     public componentDidMount() {
@@ -147,85 +150,28 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public movePlayer(direction: number[]) {
-        const playerPos = this.getPlayerPosFromGrid(this.state.grid);
-        // console.log("direction:", direction, playerPos);
-
-        // TODO: branch based on which game is being played
-
-        /**
-         *
-         * SOKOBAN RULES:
-         *
-         */
-        if (playerPos) {
-            const nextPos: [number, number] = [
-                playerPos[0] + direction[0],
-                playerPos[1] + direction[1],
-            ];
-
-            // Guard against invalid positions
-            if (!this.isValidPos(nextPos)) {
-                return;
-            }
-
-            // check for crate in nextPos
-            const tileAtNextPos = this.state.grid[nextPos[0]][nextPos[1]];
-
-            let nextCratePos: [number, number] | null = null;
-
-            // Handle crate collision
-            if (tileAtNextPos === TILES.CRATE) {
-                nextCratePos = [
-                    nextPos[0] + direction[0],
-                    nextPos[1] + direction[1],
-                ];
-
-                // If the player would force the crate into an invalid position...
-                if (!this.isValidPos(nextCratePos)) {
-                    return;
-                }
-            }
-
-            // Apply player movement
-            let nextGrid = this.applyUpdateToGrid(
-                this.state.grid,
-                nextPos,
-                TILES.PLAYER
-            );
-
-            // Apply crate movement
-            if (nextCratePos) {
-                nextGrid = this.applyUpdateToGrid(
-                    nextGrid,
-                    nextCratePos,
-                    TILES.CRATE
-                );
-            }
-
-            // Replace old position
-            nextGrid = this.applyUpdateToGrid(nextGrid, playerPos, TILES.EMPTY);
-
-            // TODO: log player action, maybe checkpoint
+        const nextGrid = this.gameService.movePlayer(
+            direction,
+            this.state.grid,
+            this.state.gridSize
+        );
+        if (nextGrid) {
             this.setState({ grid: nextGrid });
         }
-
-        /**
-         * ZELDA RULES:
-         *
-         *
-         */
-
-        // TODO...
     }
 
-    public isValidPos(pos: [number, number]) {
+    public isTargetPosition(pos: [number, number]) {
         if (
             pos[0] >= 0 &&
             pos[1] >= 0 &&
             pos[0] < this.state.gridSize[0] &&
             pos[1] < this.state.gridSize[1]
         ) {
-            return true;
+            const currentTile = this.state.grid[pos[0]][pos[1]];
+            if (currentTile === TILES.TARGET) {
+                return true;
+            }
+            return false;
         }
         return false;
     }
@@ -255,6 +201,13 @@ export class App extends React.Component<AppProps, AppState> {
         let saveMode = false;
         if (p.buttonName === SidebarButtonNames.SAVE) {
             saveMode = true;
+
+            // Unset playmode, restore
+            if (playMode) {
+                // Restore to the last edited state
+                this.restoreCheckpoint(this.state.checkpointIndex);
+                playMode = false;
+            }
         }
         // console.log("saveMode: ", saveMode);
 
@@ -312,20 +265,8 @@ export class App extends React.Component<AppProps, AppState> {
         this.activateCell(row, col, data);
     };
 
-    /**
-     * Determines where on the grid the player tile is.
-     *
-     * @param grid
-     */
     public getPlayerPosFromGrid(grid: number[][]): [number, number] | null {
-        for (let i = 0; i < this.state.gridSize[0]; i++) {
-            for (let j = 0; j < this.state.gridSize[1]; j++) {
-                if (grid[i][j] === TILES.PLAYER) {
-                    return [i, j];
-                }
-            }
-        }
-        return null;
+        return this.gameService.getPlayerPosFromGrid(grid, this.state.gridSize);
     }
 
     public applyUpdateToGrid(
@@ -333,28 +274,12 @@ export class App extends React.Component<AppProps, AppState> {
         pos: [number, number],
         tile: number
     ): number[][] {
-        const [row, col] = pos;
-        if (
-            row >= 0 &&
-            row < this.state.gridSize[0] &&
-            col >= 0 &&
-            col < this.state.gridSize[1]
-        ) {
-            const { grid: gridClone } = TensorFlowService.cloneGrid(grid);
-            let updatedGrid = gridClone;
-            // Handle player update
-            if (tile === TILES.PLAYER) {
-                updatedGrid = this.setPlayerPosOnGrid(
-                    updatedGrid,
-                    this.state.playerPos,
-                    [row, col]
-                );
-            } else {
-                updatedGrid[row][col] = tile;
-            }
-            return updatedGrid;
-        }
-        return grid;
+        return this.gameService.applyUpdateToGrid(
+            grid,
+            pos,
+            tile,
+            this.state.gridSize
+        );
     }
 
     public addCheckpoint(grid: number[][]) {
