@@ -3,7 +3,12 @@ import * as tf from "@tensorflow/tfjs";
 import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
 import { TILES, TILES_TO_CHAR, CHAR_TO_TILE } from "../../constants/tiles";
-import { isEmpty, argSort } from "../Utils/index";
+import { isEmpty, argSort, diffGrids } from "../Utils/index";
+import { SuggestionsByType } from "../AppState";
+import { IModelResult } from "../../components/App";
+import { MODEL_SUGGESTION_TIMEOUT_MS } from "../../constants";
+import { DEFAULT_PLAYER_POS } from "../AppState/index";
+import _ from "lodash";
 
 // Testing basic functionality of tensorflow using code from:
 // https://www.tensorflow.org/js/guide/tensors_operations
@@ -528,19 +533,6 @@ export class TensorFlowService {
                     }
                 );
 
-                // console.log("Suggestions:");
-                // if (suggestions) {
-                //     (suggestions as ISuggestion[]).forEach((o) => {
-                //         if (!o) return;
-                //         console.log(o.pos, o.tile);
-                //     });
-                // }
-
-                // Take only first suggestion
-                // if (repName !== "wide" && suggestions) {
-                //     suggestions = [suggestions[0]];
-                // }
-
                 // Returns an array of suggestions.
                 return {
                     suggestedGrid: gridState,
@@ -563,5 +555,263 @@ export class TensorFlowService {
             suggestedGrid: gridState,
             suggestions,
         };
+    }
+
+    /**
+     *
+     * @param pendingSuggestions
+     * @param currentGrid
+     * @param gridUpdater - a callback function that allows for game-specific grid mutations
+     */
+    public generateMajorityVoteGrid(
+        pendingSuggestions: SuggestionsByType | null,
+        currentGrid: number[][],
+        gridUpdater: (
+            grid: number[][],
+            pos: [number, number],
+            tile: number
+        ) => number[][]
+    ): { grid: number[][]; pendingSuggestions: ISuggestion[] | null } | null {
+        const hashMapOfVotes: Record<string, number> = {};
+        const minVotesForMajority = 2; // 2/3 agents is considered majority
+        if (pendingSuggestions === null) {
+            return null;
+        }
+        // 1. Iterate over all agents/representation names' suggestions
+        REPRESENTATION_NAMES.forEach((repName) => {
+            if (typeof repName === "undefined") {
+                return;
+            }
+            const key: RepresentationName = repName;
+            const suggestions: ISuggestion[] | null =
+                pendingSuggestions[key!] || null;
+            if (suggestions !== null) {
+                suggestions!.forEach((s: ISuggestion) => {
+                    const stringifiedSuggestion = `${s.pos}_${s.tile}`;
+                    if (!hashMapOfVotes[stringifiedSuggestion]) {
+                        hashMapOfVotes[stringifiedSuggestion] = 0;
+                    }
+                    hashMapOfVotes[stringifiedSuggestion] += 1;
+                });
+            }
+        });
+
+        // 2. Tally votes for overlap
+        const majoritySuggestions = [];
+        for (let key in hashMapOfVotes) {
+            if (hashMapOfVotes[key] >= minVotesForMajority) {
+                const [posStr, tileStr] = key.split("_");
+                const pos = posStr.split(",").map(Number) as [number, number];
+                const tile = Number(tileStr);
+                majoritySuggestions.push({
+                    pos,
+                    tile,
+                });
+            }
+        }
+
+        // 3. Case 1 - No agreement, return null
+        if (!majoritySuggestions.length) {
+            return null;
+        }
+
+        // 3. Case 2 - Some agreement exists...
+        let suggestedGrid = currentGrid;
+
+        // 4. Apply suggestions to grid.
+        majoritySuggestions.forEach((suggestion: ISuggestion) => {
+            suggestedGrid = gridUpdater(
+                suggestedGrid,
+                suggestion.pos,
+                // pos, // use current neighborhood pos
+                suggestion.tile
+            );
+        });
+
+        // 5. Return data for rendering
+        return {
+            grid: suggestedGrid,
+            pendingSuggestions: majoritySuggestions,
+        };
+    }
+
+    public async generateModelSuggestions(
+        nextGrid: number[][],
+        repName: RepresentationName,
+        gridSize: [number, number],
+        toolRadius: number,
+        numSteps: number,
+        clickedTile = DEFAULT_PLAYER_POS,
+        gridUpdater: (
+            grid: number[][],
+            pos: [number, number],
+            tile: number
+        ) => number[][]
+    ): Promise<IModelResult[]> {
+        const currentGrid = nextGrid;
+
+        // console.log(`Processing state using ${currentRepName} model`);
+        const timeout = (repName: string) => () =>
+            console.warn("Suggestion timeout for: ", repName);
+
+        let timers: NodeJS.Timeout[] = [];
+        const fn = async (
+            steps: number,
+            repName: RepresentationName
+        ): Promise<IModelResult> => {
+            // console.log("START: repName: ", repName);
+            // // uncomment to debug
+            // Keep track of all mutations
+            const suggestedGridStack = [currentGrid];
+
+            // Keep track of any processes that timed out.
+            timers.push(
+                setTimeout(timeout(repName), MODEL_SUGGESTION_TIMEOUT_MS)
+            );
+
+            // This doesn't matter for wide.
+            let neighborhoodPositions = [];
+
+            // Use relative position for non-wide
+            if (repName !== "wide") {
+                neighborhoodPositions = this.getNeighbors(
+                    clickedTile,
+                    gridSize,
+                    toolRadius
+                );
+            } else {
+                // Just repeat clicked position over and over for wide.
+                for (let i = 0; i < steps; i++) {
+                    neighborhoodPositions.push(clickedTile);
+                }
+            }
+
+            // console.log("neighbors: ", neighborhoodPositions);
+            // For
+            // const iters = repName !== 'wide' ? neighborhoodPositions.length : NUMBER_OF_SUGGESTIONS_IN_WIDE;
+            const iters = neighborhoodPositions.length;
+
+            // For each position in neighborhood...
+            for (let p = 0; p < iters; p++) {
+                const pos = neighborhoodPositions[p];
+                const suggestedGrid = suggestedGridStack[p];
+                if (!suggestedGrid) {
+                    console.log("grids", suggestedGridStack, p, repName);
+                    throw new Error("Missing grid!");
+                }
+
+                // Skip invalid positions
+                if (pos === null) {
+                    suggestedGridStack.push(suggestedGrid);
+                    continue;
+                }
+
+                // console.log("pos: ", pos);
+                // Keep generating new grids based on suggestions
+                const suggestionsApplied: ISuggestion[] = [];
+                for (let i = 0; i < steps; i++) {
+                    const {
+                        suggestions,
+                    }: IPredictionResult = await this.predictAndDraw(
+                        suggestedGrid,
+                        gridSize,
+                        repName!,
+                        pos,
+                        toolRadius
+                    );
+                    // For debugging -- uncomment
+                    // console.log("step: ", p, i, "pos: ", pos);
+                    if (suggestions) {
+                        // const numSuggestions = suggestions.length;
+                        let numSuggestions = 1;
+                        // When using wide, steps means the number of tiles to consider
+                        if (repName === "wide") {
+                            numSuggestions = steps;
+                        }
+                        for (let j = 0; j < numSuggestions; j++) {
+                            const suggestion: ISuggestion | null =
+                                suggestions[j];
+                            suggestionsApplied.push(suggestion);
+                            if (suggestion) {
+                                const nextSuggestedGrid = gridUpdater(
+                                    suggestedGrid,
+                                    suggestion.pos,
+                                    // pos, // use current neighborhood pos
+                                    suggestion.tile
+                                );
+
+                                /**
+                                 * Handle 'turtle' agent which returns a direction
+                                 */
+                                const direction = suggestion.direction;
+                                // When a direction is given...
+                                if (direction) {
+                                    // recompute neighbors by shifting in direction
+                                    const updatedNeighborhoodPositions = this.getNeighbors(
+                                        [
+                                            clickedTile[0] + direction[0],
+                                            clickedTile[1] + direction[1],
+                                        ],
+                                        gridSize,
+                                        toolRadius
+                                    );
+
+                                    // Change neighborhood positions to match
+                                    updatedNeighborhoodPositions.forEach(
+                                        (nextPos, idx) => {
+                                            neighborhoodPositions[
+                                                idx
+                                            ] = nextPos;
+                                        }
+                                    );
+                                }
+
+                                suggestedGridStack.push(nextSuggestedGrid);
+                            }
+                        }
+                    } else {
+                        // When there are no suggestions, terminate loop
+                        break;
+                    }
+                }
+                // console.log("suggestions_applied:", suggestionsApplied);
+            }
+
+            // Save the suggestion in the state update
+            const nextGrid: number[][] | null =
+                _.last(suggestedGridStack) || null;
+            // console.log("END: repName: ", repName);
+            // console.log("SuggestedGridStack:", suggestedGridStack);
+            const pendingSuggestions: ISuggestion[] = [];
+            // Aggregate all the suggestions from the loop above by diffing
+            // current grid and last suggested grid.
+            if (nextGrid) {
+                const diffs = diffGrids(currentGrid, nextGrid, gridSize);
+                diffs.forEach((diff) => {
+                    const suggestion: ISuggestion = {
+                        pos: diff.pos,
+                        tile: diff.b,
+                    };
+                    pendingSuggestions.push(suggestion);
+                });
+            }
+
+            // console.log("pending_suggestions:", pendingSuggestions);
+
+            return {
+                grid: nextGrid,
+                repName,
+                pendingSuggestions,
+            };
+        };
+
+        // Invoke async anon function -- a trick to do an async/await loop
+        return Promise.all(
+            REPRESENTATION_NAMES.map((repName) => fn(numSteps, repName))
+        ).then((results) => {
+            // Clean up timers...
+            timers.forEach((timer) => clearTimeout(timer));
+            return results;
+        });
     }
 }
