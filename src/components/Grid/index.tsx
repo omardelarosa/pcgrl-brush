@@ -140,11 +140,13 @@ export class Grid extends React.Component<GridProps, GridState> {
                     {/* Iterate over matrix making row elements */}
                     {!isEmptyMatrix && matrix ? (
                         [
-                            <WallRow matrix={matrix} />,
+                            <WallRow matrix={matrix} key="wall-row1" />,
                             ...matrix.map((rowItems, rowIdx) => (
                                 <GridRow key={`row_${rowIdx}`}>
                                     {[
-                                        <OuterWall />,
+                                        <OuterWall
+                                            key={`outer-wall-${rowIdx}-1`}
+                                        />,
                                         ...rowItems.map((item, colIdx) => {
                                             return (
                                                 <GridCell
@@ -172,11 +174,13 @@ export class Grid extends React.Component<GridProps, GridState> {
                                                 />
                                             );
                                         }),
-                                        <OuterWall />,
+                                        <OuterWall
+                                            key={`outer-wall-${rowIdx}-2`}
+                                        />,
                                     ]}
                                 </GridRow>
                             )),
-                            <WallRow matrix={matrix} />,
+                            <WallRow matrix={matrix} key="wall-row2" />,
                         ]
                     ) : (
                         <LoadingIndicator />

@@ -3,12 +3,8 @@ import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
 import { SuggestedGrids, SuggestionsByType } from "../../services/AppState";
-import {
-    RepresentationName,
-    TensorFlowService,
-} from "../../services/TensorFlow";
+import { RepresentationName } from "../../services/TensorFlow";
 import { LoadingIndicator } from "../LoadingIndicator";
-import { isEmpty } from "lodash";
 
 interface StageProps {
     grids: SuggestedGrids;
@@ -44,10 +40,10 @@ export function Stage({
                 classSuffix,
             ].join(" ")}
         >
-            {!grids ? <LoadingIndicator /> : null}
+            {!grids ? <LoadingIndicator key="loading-indicator-stage" /> : null}
             {Object.keys(grids).map(
                 (gridName: RepresentationName | string, idx) => (
-                    <div>
+                    <div key={`grid-${gridName}-idx`}>
                         {grids[gridName as RepresentationName] ? (
                             <Grid
                                 key={"grid_element_" + idx}

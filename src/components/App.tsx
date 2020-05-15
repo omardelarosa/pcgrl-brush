@@ -12,7 +12,6 @@ import {
     TensorFlowService,
     RepresentationName,
     REPRESENTATION_NAMES_DICT,
-    IPredictionResult,
     ISuggestion,
 } from "../services/TensorFlow";
 import {
@@ -33,15 +32,12 @@ import {
     ValidKeysType,
     ACTIONS,
     MAX_GRID_HISTORY_LENGTH,
-    MODEL_SUGGESTION_TIMEOUT_MS,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
 } from "../services/AppState";
-import _ from "lodash";
-import { diffGrids } from "../services/Utils";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow";
 import { Footer } from "./Footer";
 import { KEY_MAPPINGS } from "../constants";
@@ -68,7 +64,7 @@ export class App extends React.Component<AppProps, AppState> {
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
 
-        // Hacky way to debug
+        // Attaches services to window object for debugging.
         (window as any).__PCGRL = {
             tf: this.tfService,
             gs: this.gameService,
@@ -80,12 +76,12 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public onInit(): void {
-        // 1. Set to Narrow
+        // 1. Set to Narrow by default
         this.setState({
             currentRepresentation: "narrow",
         });
 
-        // 2. Add player
+        // 2. Add player, etc on next tick
         setTimeout(() => {
             // Use existing checkpoint if available
             if (this.props.queryState) {
@@ -287,6 +283,10 @@ export class App extends React.Component<AppProps, AppState> {
         return this.gameService.getPlayerPosFromGrid(grid, this.state.gridSize);
     }
 
+    /**
+     * Bound instance of grid mutator.  Must be bound to component in order
+     * to properly access the game service instance from TF service.
+     */
     public applyUpdateToGrid = (
         grid: number[][],
         pos: [number, number],
@@ -675,10 +675,13 @@ export class App extends React.Component<AppProps, AppState> {
             >
                 <Layout
                     header={[
-                        <div className="logo-container">
+                        <div className="logo-container" key="logo-container">
                             <Logo />
                         </div>,
-                        <div className="toolbar-container">
+                        <div
+                            className="toolbar-container"
+                            key="toolbar-container"
+                        >
                             <Toolbar
                                 playMode={this.state.playMode}
                                 buttons={this.state.toolbarButtons.map((b) => ({
@@ -723,7 +726,10 @@ export class App extends React.Component<AppProps, AppState> {
                                 />
                             </div>
                         ) : (
-                            <div className="stage-container">
+                            <div
+                                className="stage-container"
+                                key="stage_container2"
+                            >
                                 {!this.state.playMode ? (
                                     <Stage
                                         grids={{
@@ -794,7 +800,10 @@ export class App extends React.Component<AppProps, AppState> {
                         ),
                     ]}
                     footer={[
-                        <div className="footer-stage-wrapper">
+                        <div
+                            className="footer-stage-wrapper"
+                            key="footer-stage-wrapper"
+                        >
                             <Footer />
                         </div>,
                     ]}

@@ -1,4 +1,3 @@
-import * as querystring from "querystring";
 import { Checkpoint } from "../AppState";
 
 export class QueryService {
