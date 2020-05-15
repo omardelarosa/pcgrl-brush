@@ -3,6 +3,10 @@
     flex-direction: row;
 }
 
+.step-size__slider {
+    padding: 16px;
+}
+
 .cell {
     margin: 10px;
     align-self: center;
@@ -13,15 +17,17 @@
     background-color: #474747;
     border-radius: 10px;
     margin: 5px;
-    padding: 10px 20px;
+    padding: 16px 24px;
+    height: 64px;
+    width: 96px;
 }
 
 .cursorButton:hover {
-    background-color: #B5B5B5;
+    background-color: #b5b5b5;
 }
 
 .cursorButton.selected {
-    background-color: #B5B5B5;
+    background-color: #b5b5b5;
 }
 
 .slider {
@@ -33,8 +39,8 @@
     border-radius: 5px;
     outline: none;
     opacity: 1;
-    -webkit-transition: .2s;
-    transition: opacity .2s;
+    -webkit-transition: 0.2s;
+    transition: opacity 0.2s;
 }
 
 .slider::-webkit-slider-thumb {

@@ -3,10 +3,11 @@ import ReactDOM from "react-dom";
 import "./index.css";
 import { App } from "./components/App";
 import * as serviceWorker from "./serviceWorker";
+import { QueryService } from "./services/Query";
 
 ReactDOM.render(
     <React.StrictMode>
-        <App />
+        <App queryState={QueryService.initState()} />
     </React.StrictMode>,
     document.getElementById("root")
 );

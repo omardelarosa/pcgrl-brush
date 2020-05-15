@@ -1,8 +1,14 @@
 import React from "react";
 import "./styles.css";
 import { ISuggestion } from "../../services/TensorFlow";
-import { RepresentationName } from "../../services/TensorFlow/index";
+import {
+    RepresentationName,
+    TensorFlowService,
+} from "../../services/TensorFlow/index";
 import { BOARD_SIZE_PX } from "../../constants";
+import { LoadingIndicator } from "../LoadingIndicator";
+import { times } from "lodash";
+import { TILES } from "../../constants/tiles";
 
 export type CellHandler = (
     r: number,
@@ -52,7 +58,7 @@ function GridCell({
         <div
             className={[
                 "grid-cell",
-                typeof data !== "undefined" ? `t${data}` : "",
+                typeof data !== "undefined" ? `t${data % 10}` : "",
                 isHighlighted ? "grid-cell__highlighted" : "",
             ].join(" ")}
             /* style={{
@@ -68,6 +74,21 @@ function GridCell({
 
 function GridRow({ children }: { children: JSX.Element[] }) {
     return <div className="grid-row noselect">{children}</div>;
+}
+
+function OuterWall() {
+    return <div className={`grid-cell t${TILES.SOLID}`}></div>;
+}
+
+function WallRow({ matrix }: { matrix: number[][] }) {
+    const size = matrix.length + 2;
+    return (
+        <div className="grid-row noselect">
+            {times(size, (n) => (
+                <OuterWall key={`outer_wall_${n}`} />
+            ))}
+        </div>
+    );
 }
 
 export class Grid extends React.Component<GridProps, GridState> {
@@ -103,7 +124,6 @@ export class Grid extends React.Component<GridProps, GridState> {
         if (matrix) {
             const cellPx = Math.round(BOARD_SIZE_PX / matrix.length / 2);
             cellSize = [cellPx, cellPx];
-            // console.log("matrix", matrix.length, cellPx, BOARD_SIZE_PX);
         }
 
         return (
@@ -114,34 +134,50 @@ export class Grid extends React.Component<GridProps, GridState> {
                     onMouseUp={() => onGridUnClick(-1, -1, -1, gridLabel)}
                 >
                     {/* Iterate over matrix making row elements */}
-                    {matrix &&
-                        matrix.map((rowItems, rowIdx) => (
-                            <GridRow key={`row_${rowIdx}`}>
-                                {rowItems.map((item, colIdx) => {
-                                    return (
-                                        <GridCell
-                                            key={`${rowIdx}_${colIdx}`}
-                                            row={rowIdx}
-                                            col={colIdx}
-                                            data={item}
-                                            size={cellSize}
-                                            isHighlighted={
-                                                suggestionSet[rowIdx] &&
-                                                suggestionSet[rowIdx][colIdx]
-                                            }
-                                            onCellClick={onCellClick}
-                                            onCellMouseOver={onCellMouseOver}
-                                            onCellMouseDown={onCellMouseDown}
-                                            gridLabel={gridLabel || undefined}
-                                        />
-                                    );
-                                })}
-                            </GridRow>
-                        ))}
+                    {!TensorFlowService.isEmptyGrid(matrix) && matrix ? (
+                        [
+                            <WallRow matrix={matrix} />,
+                            ...matrix.map((rowItems, rowIdx) => (
+                                <GridRow key={`row_${rowIdx}`}>
+                                    {[
+                                        <OuterWall />,
+                                        ...rowItems.map((item, colIdx) => {
+                                            return (
+                                                <GridCell
+                                                    key={`${rowIdx}_${colIdx}`}
+                                                    row={rowIdx}
+                                                    col={colIdx}
+                                                    data={item}
+                                                    size={cellSize}
+                                                    isHighlighted={
+                                                        suggestionSet[rowIdx] &&
+                                                        suggestionSet[rowIdx][
+                                                            colIdx
+                                                        ]
+                                                    }
+                                                    onCellClick={onCellClick}
+                                                    onCellMouseOver={
+                                                        onCellMouseOver
+                                                    }
+                                                    onCellMouseDown={
+                                                        onCellMouseDown
+                                                    }
+                                                    gridLabel={
+                                                        gridLabel || undefined
+                                                    }
+                                                />
+                                            );
+                                        }),
+                                        <OuterWall />,
+                                    ]}
+                                </GridRow>
+                            )),
+                            <WallRow matrix={matrix} />,
+                        ]
+                    ) : (
+                        <LoadingIndicator />
+                    )}
                 </div>
-                {gridLabel && (
-                    <div className="grid-row grid-label">{gridLabel}</div>
-                )}
             </div>
         );
     }

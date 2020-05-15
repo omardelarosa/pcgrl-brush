@@ -3,6 +3,7 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
+    background-color: #aaa;
     /* background-color: red; */
 }
 
@@ -15,6 +16,7 @@
 .logo-container {
     flex: 1;
     display: flex;
+    padding: 8px;
 }
 
 .toolbar-container {
@@ -37,13 +39,19 @@
 .stage-container {
     flex: 8;
     display: flex;
+    flex-direction: column;
     /* background-color: yellow; */
 }
 
 .tileset-container {
     flex: 2;
     /* padding-right: 0.5em; */
-    padding: 0.5rem 0.5rem 0 0;
+    /* padding: 0.5rem 0.5rem 0 0; */
     height: 100%;
     padding-bottom: 0px;
+}
+
+.footer-container {
+    flex: 1;
+    display: flex;
 }

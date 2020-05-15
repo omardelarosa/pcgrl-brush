@@ -21,6 +21,7 @@ import {
     SuggestedGrids,
     SuggestionsByType,
     DEFAULT_PLAYER_POS,
+    Checkpoint,
 } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
@@ -28,16 +29,28 @@ import { TILES, CENTER_TILE_POS } from "../constants/tiles";
 import {
     GHOST_LAYER_DEBOUNCE_AMOUNT_MS,
     SUPPORTED_TILESETS,
+    EMPTY_SUGGESTED_GRIDS,
+    ValidKeysType,
+    ACTIONS,
+    MAX_GRID_HISTORY_LENGTH,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
-} from "../services/AppState/index";
+    DEFAULT_STAGE_GRID_SIZE,
+} from "../services/AppState";
 import _ from "lodash";
-import { diffGrids } from "../services/Utils/index";
-import { REPRESENTATION_NAMES } from "../services/TensorFlow/index";
+import { diffGrids } from "../services/Utils";
+import { REPRESENTATION_NAMES } from "../services/TensorFlow";
+import { Footer } from "./Footer";
+import { KEY_MAPPINGS } from "../constants";
+import { Saving } from "./Saving";
+import { GameService, Games } from "../services/Game";
+import { GameActionViewer } from "./GameActionViewer";
 
-interface AppProps {}
+interface AppProps {
+    queryState?: Checkpoint | null;
+}
 
 interface IModelResult {
     grid: number[][] | null;
@@ -46,11 +59,19 @@ interface IModelResult {
 }
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
+    private gameService: GameService;
 
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
+        this.gameService = new GameService(Games.SOKOBAN);
+
+        // Hacky way to debug
+        (window as any).__PCGRL = {
+            tf: this.tfService,
+            gs: this.gameService,
+        };
     }
 
     public componentDidMount() {
@@ -65,20 +86,103 @@ export class App extends React.Component<AppProps, AppState> {
 
         // 2. Add player
         setTimeout(() => {
-            const { grid } = TensorFlowService.cloneGrid(this.state.grid);
-            const updatedGrid = this.setPlayerPosOnGrid(
-                grid,
-                null,
-                DEFAULT_PLAYER_POS
-            );
-            this.setState({
-                grid: updatedGrid,
-                numSteps: DEFAULT_NUM_STEPS,
-                toolRadius: DEFAULT_TOOL_RADIUS,
-            });
-            // 3. Update ghostLayer
-            this.updateGhostLayer(updatedGrid, this.state.gridSize);
+            // Use existing checkpoint if available
+            if (this.props.queryState) {
+                const checkpoint = this.props.queryState;
+                const grid = TensorFlowService.textToGrid(checkpoint.gridText);
+                const gridSize = (checkpoint.gridSize ||
+                    DEFAULT_STAGE_GRID_SIZE) as [number, number];
+                this.setState(
+                    {
+                        grid,
+                        gridSize,
+                        numSteps: checkpoint.steps || DEFAULT_NUM_STEPS,
+                        toolRadius: checkpoint.radius || DEFAULT_TOOL_RADIUS,
+                        checkpoints: [checkpoint],
+                        checkpointIndex: 0,
+                    },
+                    () => {
+                        this.getSuggestionsFromModel(grid, gridSize);
+                    }
+                );
+                // Otherwise...
+            } else {
+                const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+                const updatedGrid = this.setPlayerPosOnGrid(
+                    grid,
+                    null,
+                    DEFAULT_PLAYER_POS
+                );
+
+                // add checkpoint
+                this.addCheckpoint(updatedGrid);
+                this.setState({
+                    grid: updatedGrid,
+                    numSteps: DEFAULT_NUM_STEPS,
+                    toolRadius: DEFAULT_TOOL_RADIUS,
+                });
+
+                // 3. Update ghostLayer
+                this.updateGhostLayer(updatedGrid, this.state.gridSize);
+            }
         }, 0);
+
+        window.addEventListener("keypress", this.handleKeyPress);
+    }
+
+    public handleKeyPress = (ev: KeyboardEvent) => {
+        if (this.state.playMode) {
+            if (ev.code in KEY_MAPPINGS.codes_to_actions) {
+                const action: ACTIONS =
+                    KEY_MAPPINGS.codes_to_actions[ev.code as ValidKeysType];
+                switch (action) {
+                    case ACTIONS.MOVE_DOWN:
+                        this.movePlayer([0, 1], action);
+                        break;
+                    case ACTIONS.MOVE_UP:
+                        this.movePlayer([0, -1], action);
+                        break;
+                    case ACTIONS.MOVE_LEFT:
+                        this.movePlayer([-1, 0], action);
+                        break;
+                    case ACTIONS.MOVE_RIGHT:
+                        this.movePlayer([1, 0], action);
+                        break;
+                    case ACTIONS.RETRY:
+                        this.gameService.reset();
+                        this.restoreCheckpoint(this.state.checkpointIndex);
+                        break;
+                }
+            }
+        }
+    };
+
+    public movePlayer(direction: number[], action: ACTIONS) {
+        const nextGrid = this.gameService.movePlayer(
+            direction,
+            this.state.grid,
+            this.state.gridSize,
+            action
+        );
+        if (nextGrid) {
+            this.setState({ grid: nextGrid });
+        }
+    }
+
+    public isTargetPosition(pos: [number, number]) {
+        if (
+            pos[0] >= 0 &&
+            pos[1] >= 0 &&
+            pos[0] < this.state.gridSize[0] &&
+            pos[1] < this.state.gridSize[1]
+        ) {
+            const currentTile = this.state.grid[pos[0]][pos[1]];
+            if (currentTile === TILES.TARGET) {
+                return true;
+            }
+            return false;
+        }
+        return false;
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
@@ -86,8 +190,40 @@ export class App extends React.Component<AppProps, AppState> {
             this.clearStage();
         }
 
+        let playMode = false;
+        if (p.buttonName === SidebarButtonNames.PLAY) {
+            playMode = true;
+        }
+
+        if (playMode !== this.state.playMode) {
+            // when re-entering edit mode...
+            if (playMode === false) {
+                // Restore to the last edited state
+                this.restoreCheckpoint(this.state.checkpointIndex);
+            } else {
+                // add checkpoint during mode transition
+                this.addCheckpoint(this.state.grid);
+            }
+            // when entering play mode
+        }
+
+        let saveMode = false;
+        if (p.buttonName === SidebarButtonNames.SAVE) {
+            saveMode = true;
+
+            // Unset playmode, restore
+            if (playMode) {
+                // Restore to the last edited state
+                this.restoreCheckpoint(this.state.checkpointIndex);
+                playMode = false;
+            }
+        }
+        // console.log("saveMode: ", saveMode);
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
+            playMode,
+            saveMode,
         });
     };
 
@@ -138,20 +274,8 @@ export class App extends React.Component<AppProps, AppState> {
         this.activateCell(row, col, data);
     };
 
-    /**
-     * Determines where on the grid the player tile is.
-     *
-     * @param grid
-     */
     public getPlayerPosFromGrid(grid: number[][]): [number, number] | null {
-        for (let i = 0; i < this.state.gridSize[0]; i++) {
-            for (let j = 0; j < this.state.gridSize[1]; j++) {
-                if (grid[i][j] === TILES.PLAYER) {
-                    return [i, j];
-                }
-            }
-        }
-        return null;
+        return this.gameService.getPlayerPosFromGrid(grid, this.state.gridSize);
     }
 
     public applyUpdateToGrid(
@@ -159,31 +283,98 @@ export class App extends React.Component<AppProps, AppState> {
         pos: [number, number],
         tile: number
     ): number[][] {
-        const [row, col] = pos;
-        if (
-            row >= 0 &&
-            row < this.state.gridSize[0] &&
-            col >= 0 &&
-            col < this.state.gridSize[1]
+        return this.gameService.applyUpdateToGrid(
+            grid,
+            pos,
+            tile,
+            this.state.gridSize
+        );
+    }
+
+    public addCheckpoint(grid: number[][]) {
+        // TODO: add support for dynamic grid sizes
+        let checkpoints = [...this.state.checkpoints];
+        // let gridHistory = [...this.state.gridHistory];
+
+        // Keep track of current spot in history
+        const currentCheckpointIndex = this.state.checkpointIndex;
+        let nextCheckpointIndex = currentCheckpointIndex + 1;
+
+        while (
+            checkpoints.length >= MAX_GRID_HISTORY_LENGTH ||
+            currentCheckpointIndex < checkpoints.length - 1
         ) {
-            const { grid: gridClone } = TensorFlowService.cloneGrid(grid);
-            let updatedGrid = gridClone;
-            // Handle player update
-            if (tile === TILES.PLAYER) {
-                updatedGrid = this.setPlayerPosOnGrid(
-                    updatedGrid,
-                    this.state.playerPos,
-                    [row, col]
-                );
-            } else {
-                updatedGrid[row][col] = tile;
-            }
-            return updatedGrid;
+            checkpoints.shift();
+            nextCheckpointIndex--; // decrement pointer, since list is getting shorter
         }
-        return grid;
+
+        // const grid = this.state.grid;
+
+        const checkpoint: Checkpoint = {
+            gridText: TensorFlowService.gridToText(grid),
+            gridSize: this.state.gridSize,
+            radius: this.state.toolRadius,
+            steps: this.state.numSteps,
+        };
+
+        // Add new grid
+        checkpoints.push(checkpoint);
+
+        const a: Checkpoint | undefined = checkpoints[currentCheckpointIndex];
+        const b: Checkpoint | undefined = checkpoints[nextCheckpointIndex];
+
+        // Diff and avoid adding redundant checkpoints
+        if (JSON.stringify(a) === JSON.stringify(b)) {
+            return;
+        }
+
+        this.setState({
+            checkpoints,
+            checkpointIndex: nextCheckpointIndex,
+        });
+    }
+
+    public restoreCheckpoint(idx: number): void {
+        if (idx === -1) {
+            console.log("No history!");
+            return;
+        }
+
+        if (idx >= this.state.checkpoints.length) {
+            console.log("Too far forward...");
+            return;
+        }
+
+        const checkpoint: Checkpoint = this.state.checkpoints[idx];
+        if (checkpoint) {
+            const nextGrid: number[][] = TensorFlowService.textToGrid(
+                checkpoint.gridText
+            );
+            this.setState(
+                {
+                    grid: nextGrid,
+                    checkpointIndex: idx,
+                    toolRadius: Number(checkpoint.radius),
+                    numSteps: Number(checkpoint.steps),
+                    suggestedGrids: {
+                        ...EMPTY_SUGGESTED_GRIDS,
+                    },
+                    pendingSuggestions: null,
+                },
+                () => {
+                    // TODO: safely get suggestions for new grid...
+                    this.getSuggestionsFromModel(nextGrid, this.state.gridSize);
+                }
+            );
+        }
     }
 
     public activateCell(row: number, col: number, data: number): void {
+        // Grid is immutable in playmode
+        if (this.state.playMode) {
+            return;
+        }
+
         // const { grid } = TensorFlowService.cloneGrid(this.state.grid);
         let nextGrid: number[][] = this.state.grid;
         let nextPlayerPos: [number, number] | null = null;
@@ -209,10 +400,14 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
+        // add checkpoint
+        this.addCheckpoint(this.state.grid);
+
         this.setState({
             grid: nextGrid,
             playerPos: nextPlayerPos || this.state.playerPos,
         });
+
         this.updateGhostLayer(nextGrid, this.state.gridSize, undefined, [
             row,
             col,
@@ -223,6 +418,10 @@ export class App extends React.Component<AppProps, AppState> {
         const { grid: nextGrid } = TensorFlowService.createGameGrid(
             this.state.gridSize
         );
+
+        // add checkpoint
+        this.addCheckpoint(this.state.grid);
+
         this.setState({
             grid: nextGrid,
             playerPos: DEFAULT_PLAYER_POS,
@@ -343,10 +542,14 @@ export class App extends React.Component<AppProps, AppState> {
         if (suggestedGrid) {
             const nextPlayerPos = this.getPlayerPosFromGrid(suggestedGrid);
             const pendingSuggestions: SuggestionsByType = {};
-            const suggestedGrids = {} as SuggestedGrids;
+            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
             REPRESENTATION_NAMES.forEach((repName) => {
                 suggestedGrids[key!] = suggestedGrid;
             });
+
+            // add checkpoint
+            this.addCheckpoint(this.state.grid);
+
             this.setState({
                 grid: suggestedGrid,
                 playerPos: nextPlayerPos ? nextPlayerPos : this.state.playerPos,
@@ -364,17 +567,42 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
+    public handleUndoRedo = (direction: number) => {
+        // console.log("direction: ", direction);
+        this.restoreCheckpoint(this.state.checkpointIndex + direction);
+    };
+
     public updateToolRadius = (step: number, radius: number): void => {
         if (radius !== this.state.toolRadius) {
-            this.setState({
-                toolRadius: radius,
-            });
+            this.setState(
+                {
+                    toolRadius: radius,
+                    pendingSuggestions: null,
+                    suggestedGrids: { ...EMPTY_SUGGESTED_GRIDS },
+                },
+                () => {
+                    this.getSuggestionsFromModel(
+                        this.state.grid,
+                        this.state.gridSize
+                    );
+                }
+            );
         }
 
         if (step !== this.state.numSteps) {
-            this.setState({
-                numSteps: step,
-            });
+            this.setState(
+                {
+                    numSteps: step,
+                    pendingSuggestions: null,
+                    suggestedGrids: { ...EMPTY_SUGGESTED_GRIDS },
+                },
+                () => {
+                    this.getSuggestionsFromModel(
+                        this.state.grid,
+                        this.state.gridSize
+                    );
+                }
+            );
         }
     };
 
@@ -556,7 +784,7 @@ export class App extends React.Component<AppProps, AppState> {
             )
         ).then((results) => {
             // Save the suggestion in the state update
-            const suggestedGrids = {} as any;
+            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
             const pendingSuggestions = {} as any;
             results.forEach((result: any) => {
                 if (result) {
@@ -584,7 +812,7 @@ export class App extends React.Component<AppProps, AppState> {
                 pendingSuggestions["majority"] = [];
             }
 
-            console.log("majority", majorityVoteData);
+            // console.log("majority", majorityVoteData);
 
             // Update the UI state based on the suggested grids, etc.
             this.setState({
@@ -604,6 +832,10 @@ export class App extends React.Component<AppProps, AppState> {
         // Cancel any pending calls
         this.getSuggestionsFromModel.cancel();
 
+        if (this.state.playMode) {
+            return;
+        }
+
         this.getSuggestionsFromModel(
             nextGrid,
             nextSize,
@@ -620,77 +852,138 @@ export class App extends React.Component<AppProps, AppState> {
 
     public render() {
         return (
-            <div className={["App", this.state.tileset || ""].join(" ")}>
+            <div
+                className={[
+                    "App",
+                    this.state.tileset || "",
+                    this.state.playMode ? "play-mode" : "",
+                ].join(" ")}
+            >
                 <Layout
-                    logo={<Logo />}
-                    sidebar={
-                        <Sidebar
-                            buttons={this.state.sidebarButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonName ===
-                                    this.state.selectedSidebarButtonName,
-                                onClick: this.onSidebarButtonClick,
-                            }))}
-                        />
-                    }
-                    toolbar={
-                        <Toolbar
-                            buttons={this.state.toolbarButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonValue ===
-                                    this.state.currentRepresentation,
-                                onClick: this.onToolbarButtonClick,
-                            }))}
-                            gridSize={this.state.gridSize}
-                            onUpdateGridSize={this.onUpdateGridSize}
-                            onStepSizeChange={this.updateToolRadius}
-                            enableResize
-                        />
-                    }
-                    stages={[
-                        <Stage
-                            grids={
-                                {
-                                    user: this.state.grid as number[][],
-                                } as SuggestedGrids
-                            }
-                            onGridClick={this.onGridClick}
-                            onGridUnClick={this.onGridUnClick}
-                            onCellMouseOver={this.onCellMouseOver}
-                            onCellMouseDown={this.onCellClick}
-                            onCellClick={this.onCellClick}
-                            onGhostGridClick={this.acceptGhostSuggestions}
-                            pendingSuggestions={this.state.pendingSuggestions}
-                        />,
-                        <Stage
-                            grids={{
-                                ...this.state.suggestedGrids,
-                            }}
-                            vertical
-                            onGridClick={this.onGridClick}
-                            onGridUnClick={this.onGridUnClick}
-                            onCellMouseOver={this.onCellMouseOver}
-                            onCellMouseDown={this.onCellClick}
-                            onCellClick={this.onCellClick}
-                            onGhostGridClick={this.acceptGhostSuggestions}
-                            pendingSuggestions={this.state.pendingSuggestions}
-                        />,
+                    header={[
+                        <div className="logo-container">
+                            <Logo />
+                        </div>,
+                        <div className="toolbar-container">
+                            <Toolbar
+                                playMode={this.state.playMode}
+                                buttons={this.state.toolbarButtons.map((b) => ({
+                                    ...b,
+                                    selected:
+                                        b.buttonValue ===
+                                        this.state.currentRepresentation,
+                                    onClick: this.onToolbarButtonClick,
+                                }))}
+                                onHistoryClick={this.handleUndoRedo}
+                                gridSize={this.state.gridSize}
+                                onUpdateGridSize={this.onUpdateGridSize}
+                                onStepSizeChange={this.updateToolRadius}
+                                defaultSelected={this.state.toolRadius}
+                                defaultStep={this.state.numSteps}
+                            />
+                        </div>,
                     ]}
-                    tileset={
-                        <Tileset
-                            buttons={this.state.tilesetButtons.map((b) => ({
-                                ...b,
-                                selected:
-                                    b.buttonValue ===
-                                    this.state.selectedTilesetButtonName,
-                                onClick: this.onTilesetButtonClick,
-                            }))}
-                            tilesets={SUPPORTED_TILESETS}
-                            onTileSetChange={this.updateTileSet}
-                        />
-                    }
+                    center={[
+                        <div
+                            className="sidebar-container"
+                            key="sidebar_container1"
+                        >
+                            <Sidebar
+                                buttons={this.state.sidebarButtons.map((b) => ({
+                                    ...b,
+                                    selected:
+                                        b.buttonName ===
+                                        this.state.selectedSidebarButtonName,
+                                    onClick: this.onSidebarButtonClick,
+                                }))}
+                            />
+                        </div>,
+                        this.state.saveMode ? (
+                            <div
+                                className="stage-container"
+                                key="stage_container1"
+                            >
+                                <Saving
+                                    checkpoints={this.state.checkpoints}
+                                    checkpointIndex={this.state.checkpointIndex}
+                                />
+                            </div>
+                        ) : (
+                            <div className="stage-container">
+                                {!this.state.playMode ? (
+                                    <Stage
+                                        grids={{
+                                            ...this.state.suggestedGrids,
+                                        }}
+                                        vertical={false}
+                                        classSuffix="suggestions-stage"
+                                        onGridClick={this.onGridClick}
+                                        onGridUnClick={this.onGridUnClick}
+                                        onCellMouseOver={this.onCellMouseOver}
+                                        onCellMouseDown={this.onCellClick}
+                                        onCellClick={this.onCellClick}
+                                        onGhostGridClick={
+                                            this.acceptGhostSuggestions
+                                        }
+                                        pendingSuggestions={
+                                            this.state.pendingSuggestions
+                                        }
+                                    />
+                                ) : (
+                                    <GameActionViewer
+                                        gameService={this.gameService}
+                                    />
+                                )}
+                                <Stage
+                                    grids={
+                                        {
+                                            user: this.state.grid as number[][],
+                                        } as SuggestedGrids
+                                    }
+                                    classSuffix="user-stage"
+                                    onGridClick={this.onGridClick}
+                                    onGridUnClick={this.onGridUnClick}
+                                    onCellMouseOver={this.onCellMouseOver}
+                                    onCellMouseDown={this.onCellClick}
+                                    onCellClick={this.onCellClick}
+                                    onGhostGridClick={
+                                        this.acceptGhostSuggestions
+                                    }
+                                    pendingSuggestions={
+                                        this.state.playMode
+                                            ? null
+                                            : this.state.pendingSuggestions
+                                    }
+                                />
+                            </div>
+                        ),
+                        this.state.playMode ? null : (
+                            <div
+                                className="tileset-container"
+                                key="tileset_container1"
+                            >
+                                <Tileset
+                                    buttons={this.state.tilesetButtons.map(
+                                        (b) => ({
+                                            ...b,
+                                            selected:
+                                                b.buttonValue ===
+                                                this.state
+                                                    .selectedTilesetButtonName,
+                                            onClick: this.onTilesetButtonClick,
+                                        })
+                                    )}
+                                    tilesets={SUPPORTED_TILESETS}
+                                    onTileSetChange={this.updateTileSet}
+                                />
+                            </div>
+                        ),
+                    ]}
+                    footer={[
+                        <div className="footer-stage-wrapper">
+                            <Footer />
+                        </div>,
+                    ]}
                 />
             </div>
         );

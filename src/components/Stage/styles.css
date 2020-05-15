@@ -18,11 +18,26 @@
     flex: 0 0;
 }
 
-.stage .user-canvas {
+.user-stage {
+    background-color: #fff;
+    flex: 8;
+}
+
+.suggestions-stage {
+    flex: 2;
+    background-color: #fff;
 }
 
 .ghost-canvas {
     opacity: 0.7;
+}
+
+.user-canvas {
+    height: 100%;
+}
+
+.footer-stage-wrapper {
+    width: 100%;
 }
 
 .ghost-canvas .grid-row .grid-cell {
@@ -50,6 +65,9 @@
 
 .ghost-canvas .grid-cell.t2 {
     background-position: 0px -32px;
+}
+
+.play-mode .ghost-canvas .grid-cell.t2 {
     animation: ghostPlayerAnim 1s steps(3) infinite;
 }
 
@@ -68,6 +86,9 @@
 
 .ghost-canvas .grid-cell.t4 {
     background-position: 0px -64px;
+}
+
+.play-mode .ghost-canvas .grid-cell.t4 {
     animation: ghostTargetAnim 1s steps(4) infinite;
 }
 
@@ -80,10 +101,27 @@
     }
 }
 
+@keyframes suggestionAnim {
+    from {
+        filter: opacity(50%);
+    }
+    to {
+        filter: opacity(100%);
+    }
+}
+
 .user-canvas .grid-cell.grid-cell__highlighted {
-    filter: hue-rotate(300deg); /* this turns the cell green */
+    /* filter: hue-rotate(300deg); this turns the cell green */
+    /* filter: saturate(400%); */
+    animation: suggestionAnim 750ms infinite;
 }
 
 .ghost-canvas .grid-cell.grid-cell__highlighted {
-    filter: hue-rotate(90deg); /* this turns the cell green */
+    /* filter: hue-rotate(90deg); this turns the cell green */
+    /* filter: saturate(400%); */
+    filter: opacity(100%);
+}
+
+.ghost-canvas .grid-cell {
+    filter: opacity(40%);
 }

@@ -1,18 +1,18 @@
 .tileset {
-    /* position: absolute; */
-    /* width: 300px; */
-    /* left: 80%; */
-    /* top: 20%; */
+    height: 100%;
     background-color: #474747;
     flex-direction: column;
     color: white;
-    padding: 0.5rem 0.5rem;
+}
+
+.tileset-heading {
+    padding: 16px;
 }
 
 .tileset-toggle {
     margin: 4px;
     padding: 8px;
-    font-size: 0.3em;
+    font-size: 1em;
 }
 
 .tileset-icon {
@@ -43,6 +43,9 @@
 
 .tileset-icon.t2 {
     background-position: 0px -128px;
+}
+
+.play-mode .tileset-icon.t2 {
     animation: playerAnim 1s steps(3) infinite;
 }
 
@@ -61,6 +64,9 @@
 
 .tileset-icon.t4 {
     background-position: 0px -256px;
+}
+
+.play-mode .tileset-icon.t4 {
     animation: targetAnim 1s steps(4) infinite;
 }
 

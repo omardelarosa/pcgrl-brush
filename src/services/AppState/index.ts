@@ -19,6 +19,13 @@ export type SuggestionsByType = Partial<
     Record<RepresentationName, ISuggestion[] | null>
 >;
 
+export interface Checkpoint {
+    gridText: string;
+    gridSize: number[];
+    radius: number;
+    steps: number;
+}
+
 export interface AppState {
     sidebarButtons: ButtonProps[];
     toolbarButtons: ButtonProps[];
@@ -36,6 +43,10 @@ export interface AppState {
     toolRadius: number;
     numSteps: number;
     tileset?: string;
+    playMode?: boolean;
+    saveMode?: boolean;
+    checkpoints: Checkpoint[];
+    checkpointIndex: number;
 }
 
 export class AppStateService {
@@ -55,6 +66,16 @@ export class AppStateService {
                 {
                     buttonName: SidebarButtonNames.TRASH,
                     iconName: IconNames.BIN,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.PLAY,
+                    iconName: IconNames.PLAY,
+                    className: "sidebar",
+                },
+                {
+                    buttonName: SidebarButtonNames.SAVE,
+                    iconName: IconNames.SAVE,
                     className: "sidebar",
                 },
                 // Add additional buttons here and they will appear in the UI...
@@ -127,6 +148,11 @@ export class AppStateService {
             isClicking: false,
             toolRadius: DEFAULT_TOOL_RADIUS,
             numSteps: DEFAULT_NUM_STEPS,
+            tileset: "classic",
+            playMode: false,
+            saveMode: false,
+            checkpoints: [],
+            checkpointIndex: -1, // no history
         };
     }
 }
