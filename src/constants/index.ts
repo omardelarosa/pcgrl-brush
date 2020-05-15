@@ -8,6 +8,8 @@ export const SUPPORTED_TILESETS = ["dungeon", "classic"];
 
 export const BOARD_SIZE_PX = 512;
 
+export const MODEL_SUGGESTION_TIMEOUT_MS = 10000;
+
 // Number of steps supported by undo/redo.
 export const MAX_GRID_HISTORY_LENGTH = 20;
 

@@ -276,6 +276,34 @@ export class GameService {
         return null;
     }
 
+    /**
+     * Adds a player to a grid.
+     *
+     * @param grid
+     * @param currentPos
+     * @param nextPos
+     */
+    public setPlayerPosOnGrid(
+        grid: number[][],
+        currentPos: [number, number] | null,
+        nextPos: [number, number]
+    ): number[][] {
+        if (currentPos) {
+            grid[currentPos[0]][currentPos[1]] = TILES.EMPTY; // remove from prev
+        }
+        grid[nextPos[0]][nextPos[1]] = TILES.PLAYER; // add next
+        return grid;
+    }
+
+    /**
+     * Clears a game grid.
+     * @param currentGrid
+     */
+    public clearGrid(gridSize: [number, number]) {
+        let { grid } = TensorFlowService.createGameGrid(gridSize);
+        return grid;
+    }
+
     public reset() {
         // TODO: keep track of "best?"
         this.actions = [];

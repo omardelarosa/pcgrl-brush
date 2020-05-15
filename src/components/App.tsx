@@ -33,6 +33,7 @@ import {
     ValidKeysType,
     ACTIONS,
     MAX_GRID_HISTORY_LENGTH,
+    MODEL_SUGGESTION_TIMEOUT_MS,
 } from "../constants";
 import {
     DEFAULT_NUM_STEPS,
@@ -108,6 +109,8 @@ export class App extends React.Component<AppProps, AppState> {
                 // Otherwise...
             } else {
                 const { grid } = TensorFlowService.cloneGrid(this.state.grid);
+
+                // Add a player by default
                 const updatedGrid = this.setPlayerPosOnGrid(
                     grid,
                     null,
@@ -127,10 +130,26 @@ export class App extends React.Component<AppProps, AppState> {
             }
         }, 0);
 
-        window.addEventListener("keypress", this.handleKeyPress);
+        this.attachEventListeners();
     }
 
+    public componentWillUnmount() {
+        // Clean up...
+        this.detachEventListeners();
+    }
+
+    public attachEventListeners = () => {
+        // Attach global event listener..
+        window.addEventListener("keypress", this.handleKeyPress);
+    };
+
+    public detachEventListeners = () => {
+        // Detach global event listener..
+        window.removeEventListener("keypress", this.handleKeyPress);
+    };
+
     public handleKeyPress = (ev: KeyboardEvent) => {
+        // TODO: make this game agnostic...
         if (this.state.playMode) {
             if (ev.code in KEY_MAPPINGS.codes_to_actions) {
                 const action: ACTIONS =
@@ -157,6 +176,12 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
+    /**
+     * Delegates to game service and updates state accordingly.
+     *
+     * @param direction
+     * @param action
+     */
     public movePlayer(direction: number[], action: ACTIONS) {
         const nextGrid = this.gameService.movePlayer(
             direction,
@@ -167,22 +192,6 @@ export class App extends React.Component<AppProps, AppState> {
         if (nextGrid) {
             this.setState({ grid: nextGrid });
         }
-    }
-
-    public isTargetPosition(pos: [number, number]) {
-        if (
-            pos[0] >= 0 &&
-            pos[1] >= 0 &&
-            pos[0] < this.state.gridSize[0] &&
-            pos[1] < this.state.gridSize[1]
-        ) {
-            const currentTile = this.state.grid[pos[0]][pos[1]];
-            if (currentTile === TILES.TARGET) {
-                return true;
-            }
-            return false;
-        }
-        return false;
     }
 
     public onSidebarButtonClick = (ev: React.MouseEvent, p: ButtonProps) => {
@@ -415,31 +424,32 @@ export class App extends React.Component<AppProps, AppState> {
     }
 
     public clearStage() {
-        const { grid: nextGrid } = TensorFlowService.createGameGrid(
-            this.state.gridSize
-        );
+        const nextGrid = this.gameService.clearGrid(this.state.gridSize);
 
         // add checkpoint
         this.addCheckpoint(this.state.grid);
-
-        this.setState({
-            grid: nextGrid,
-            playerPos: DEFAULT_PLAYER_POS,
-        });
-
-        this.updateGhostLayer(nextGrid, this.state.gridSize);
+        this.setState(
+            {
+                grid: nextGrid,
+            },
+            () => {
+                this.updateGhostLayer(nextGrid, this.state.gridSize);
+            }
+        );
     }
 
+    /**
+     * Delegates to game service to all for game-specific implementations later.
+     * @param grid
+     * @param currentPos
+     * @param nextPos
+     */
     public setPlayerPosOnGrid(
         grid: number[][],
         currentPos: [number, number] | null,
         nextPos: [number, number]
     ): number[][] {
-        if (currentPos) {
-            grid[currentPos[0]][currentPos[1]] = TILES.EMPTY; // remove from prev
-        }
-        grid[nextPos[0]][nextPos[1]] = TILES.PLAYER; // add next
-        return grid;
+        return this.gameService.setPlayerPosOnGrid(grid, currentPos, nextPos);
     }
 
     public onUpdateGridSize = (newSize: [number, number]) => {
@@ -627,7 +637,10 @@ export class App extends React.Component<AppProps, AppState> {
         const currentGrid = nextGrid;
 
         // console.log(`Processing state using ${currentRepName} model`);
+        const timeout = (repName: string) => () =>
+            console.warn("Suggestion timeout for: ", repName);
 
+        let timers: NodeJS.Timeout[] = [];
         const fn = async (
             steps: number,
             repName: RepresentationName
@@ -636,6 +649,11 @@ export class App extends React.Component<AppProps, AppState> {
             // // uncomment to debug
             // Keep track of all mutations
             const suggestedGridStack = [currentGrid];
+
+            // Keep track of any processes that timed out.
+            timers.push(
+                setTimeout(timeout(repName), MODEL_SUGGESTION_TIMEOUT_MS)
+            );
 
             // This doesn't matter for wide.
             let neighborhoodPositions = [];
@@ -782,45 +800,50 @@ export class App extends React.Component<AppProps, AppState> {
             REPRESENTATION_NAMES.map((repName) =>
                 fn(this.state.numSteps, repName)
             )
-        ).then((results) => {
-            // Save the suggestion in the state update
-            const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
-            const pendingSuggestions = {} as any;
-            results.forEach((result: any) => {
-                if (result) {
-                    const key = result.repName as RepresentationName;
-                    if (typeof key !== "undefined" && key !== null) {
-                        suggestedGrids[key] = result.grid;
-                        pendingSuggestions[key] = result.pendingSuggestions;
+        )
+            .then((results) => {
+                // Save the suggestion in the state update
+                const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
+                const pendingSuggestions = {} as any;
+                results.forEach((result: any) => {
+                    if (result) {
+                        const key = result.repName as RepresentationName;
+                        if (typeof key !== "undefined" && key !== null) {
+                            suggestedGrids[key] = result.grid;
+                            pendingSuggestions[key] = result.pendingSuggestions;
+                        }
                     }
+                });
+                // console.log("pending_suggestions:", pendingSuggestions);
+
+                const majorityVoteData = this.generateMajorityVoteGrid(
+                    pendingSuggestions,
+                    currentGrid
+                );
+                if (majorityVoteData) {
+                    suggestedGrids["majority"] = majorityVoteData.grid;
+                    pendingSuggestions["majority"] =
+                        majorityVoteData.pendingSuggestions;
+                    pendingSuggestions["user"] =
+                        majorityVoteData.pendingSuggestions;
+                } else {
+                    suggestedGrids["majority"] = currentGrid;
+                    pendingSuggestions["majority"] = [];
                 }
+
+                // console.log("majority", majorityVoteData);
+                timers.forEach((timer) => clearTimeout(timer));
+
+                // Update the UI state based on the suggested grids, etc.
+                this.setState({
+                    suggestedGrids,
+                    // Add an array of pending suggestions to state
+                    pendingSuggestions,
+                });
+            })
+            .catch((err) => {
+                console.warn("error generating suggestions: ", err);
             });
-            // console.log("pending_suggestions:", pendingSuggestions);
-
-            const majorityVoteData = this.generateMajorityVoteGrid(
-                pendingSuggestions,
-                currentGrid
-            );
-            if (majorityVoteData) {
-                suggestedGrids["majority"] = majorityVoteData.grid;
-                pendingSuggestions["majority"] =
-                    majorityVoteData.pendingSuggestions;
-                pendingSuggestions["user"] =
-                    majorityVoteData.pendingSuggestions;
-            } else {
-                suggestedGrids["majority"] = currentGrid;
-                pendingSuggestions["majority"] = [];
-            }
-
-            // console.log("majority", majorityVoteData);
-
-            // Update the UI state based on the suggested grids, etc.
-            this.setState({
-                suggestedGrids,
-                // Add an array of pending suggestions to state
-                pendingSuggestions,
-            });
-        });
     }, GHOST_LAYER_DEBOUNCE_AMOUNT_MS);
 
     public updateGhostLayer = (

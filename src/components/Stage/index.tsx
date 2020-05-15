@@ -44,7 +44,7 @@ export function Stage({
                 classSuffix,
             ].join(" ")}
         >
-            {isEmpty(grids) ? <LoadingIndicator /> : null}
+            {!grids ? <LoadingIndicator /> : null}
             {Object.keys(grids).map(
                 (gridName: RepresentationName | string, idx) => (
                     <div>
