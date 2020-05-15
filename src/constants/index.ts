@@ -43,4 +43,12 @@ export const KEY_MAPPINGS = {
     },
 };
 
+export const ACTIONS_TO_SYMBOLS = {
+    [ACTIONS.MOVE_UP]: "⬆️",
+    [ACTIONS.MOVE_DOWN]: "⬇️",
+    [ACTIONS.MOVE_LEFT]: "⬅️",
+    [ACTIONS.MOVE_RIGHT]: "➡️",
+    [ACTIONS.RETRY]: "⎌",
+};
+
 export type ValidKeysType = "KeyA" | "KeyW" | "KeyS" | "KeyD" | "KeyR";

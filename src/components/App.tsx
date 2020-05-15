@@ -46,6 +46,7 @@ import { Footer } from "./Footer";
 import { KEY_MAPPINGS } from "../constants";
 import { Saving } from "./Saving";
 import { GameService, Games } from "../services/Game";
+import { GameActionViewer } from "./GameActionViewer";
 
 interface AppProps {
     queryState?: Checkpoint | null;
@@ -65,6 +66,12 @@ export class App extends React.Component<AppProps, AppState> {
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
+
+        // Hacky way to debug
+        (window as any).__PCGRL = {
+            tf: this.tfService,
+            gs: this.gameService,
+        };
     }
 
     public componentDidMount() {
@@ -130,18 +137,19 @@ export class App extends React.Component<AppProps, AppState> {
                     KEY_MAPPINGS.codes_to_actions[ev.code as ValidKeysType];
                 switch (action) {
                     case ACTIONS.MOVE_DOWN:
-                        this.movePlayer([0, 1]);
+                        this.movePlayer([0, 1], action);
                         break;
                     case ACTIONS.MOVE_UP:
-                        this.movePlayer([0, -1]);
+                        this.movePlayer([0, -1], action);
                         break;
                     case ACTIONS.MOVE_LEFT:
-                        this.movePlayer([-1, 0]);
+                        this.movePlayer([-1, 0], action);
                         break;
                     case ACTIONS.MOVE_RIGHT:
-                        this.movePlayer([1, 0]);
+                        this.movePlayer([1, 0], action);
                         break;
                     case ACTIONS.RETRY:
+                        this.gameService.resetActions();
                         this.restoreCheckpoint(this.state.checkpointIndex);
                         break;
                 }
@@ -149,11 +157,12 @@ export class App extends React.Component<AppProps, AppState> {
         }
     };
 
-    public movePlayer(direction: number[]) {
+    public movePlayer(direction: number[], action: ACTIONS) {
         const nextGrid = this.gameService.movePlayer(
             direction,
             this.state.grid,
-            this.state.gridSize
+            this.state.gridSize,
+            action
         );
         if (nextGrid) {
             this.setState({ grid: nextGrid });
@@ -901,7 +910,7 @@ export class App extends React.Component<AppProps, AppState> {
                             </div>
                         ) : (
                             <div className="stage-container">
-                                {!this.state.playMode && (
+                                {!this.state.playMode ? (
                                     <Stage
                                         grids={{
                                             ...this.state.suggestedGrids,
@@ -919,6 +928,10 @@ export class App extends React.Component<AppProps, AppState> {
                                         pendingSuggestions={
                                             this.state.pendingSuggestions
                                         }
+                                    />
+                                ) : (
+                                    <GameActionViewer
+                                        gameService={this.gameService}
                                     />
                                 )}
                                 <Stage

@@ -4,22 +4,32 @@ import {
     MULTITILE_CRATE_TARGET,
     MULTITILE_PLAYER_TARGET,
 } from "../../constants/tiles";
+import { ACTIONS } from "../../constants";
 
 export enum Games {
     SOKOBAN,
     ZELDA,
 }
 
+export interface GameAction {
+    name: string;
+    value: any;
+    action: ACTIONS;
+}
+
 export class GameService {
     private game: Games;
+    public actions: GameAction[];
     constructor(game: Games) {
         this.game = game;
+        this.actions = [];
     }
 
     public movePlayer(
         direction: number[],
         grid: number[][],
-        gridSize: number[] | [number, number]
+        gridSize: number[] | [number, number],
+        action: ACTIONS
     ) {
         /**
          *
@@ -97,6 +107,7 @@ export class GameService {
                 );
 
                 // console.log("move:", direction, "next_grid: ", nextGrid);
+                this.actions.push({ name: "move", value: direction, action });
                 // TODO: log player action, maybe checkpoint
                 return nextGrid;
             }
@@ -247,5 +258,10 @@ export class GameService {
             }
         }
         return null;
+    }
+
+    public resetActions() {
+        // TODO: keep track of "best?"
+        this.actions = [];
     }
 }

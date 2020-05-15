@@ -1,0 +1,13 @@
+.game-actions {
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    max-height: 200px;
+    flex: 1;
+    flex-wrap: wrap;
+    overflow-y: scroll;
+}
+
+.game-action-symbol {
+    margin: 4px;
+}
