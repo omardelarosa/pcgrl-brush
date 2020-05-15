@@ -34,6 +34,7 @@ export const KEY_MAPPINGS = {
         [ACTIONS.MOVE_LEFT]: "Move player left.",
         [ACTIONS.MOVE_RIGHT]: "Move player right.",
         [ACTIONS.RETRY]: "Reset level and try again.",
+        [ACTIONS.WIN]: "Move all the crates to the blinking targets.",
     },
     codes_to_actions: {
         KeyA: ACTIONS.MOVE_LEFT,
@@ -41,6 +42,15 @@ export const KEY_MAPPINGS = {
         KeyS: ACTIONS.MOVE_DOWN,
         KeyD: ACTIONS.MOVE_RIGHT,
         KeyR: ACTIONS.RETRY,
+        None: ACTIONS.WIN,
+    },
+    actions_to_codes: {
+        [ACTIONS.MOVE_LEFT]: "A",
+        [ACTIONS.MOVE_UP]: "W",
+        [ACTIONS.MOVE_DOWN]: "S",
+        [ACTIONS.MOVE_RIGHT]: "D",
+        [ACTIONS.RETRY]: "R",
+        [ACTIONS.WIN]: "🏆",
     },
 };
 
@@ -53,4 +63,4 @@ export const ACTIONS_TO_SYMBOLS = {
     [ACTIONS.WIN]: "🏆",
 };
 
-export type ValidKeysType = "KeyA" | "KeyW" | "KeyS" | "KeyD" | "KeyR";
+export type ValidKeysType = "KeyA" | "KeyW" | "KeyS" | "KeyD" | "KeyR" | "None";

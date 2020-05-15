@@ -1,0 +1,30 @@
+.instructions-container {
+    width: 100%;
+}
+
+.instructions {
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+}
+
+.instructions-row {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.instructions-row span {
+    margin: 0px 16px 0px 16px;
+    display: flex;
+}
+
+.instructions .instruction-key {
+    font-weight: bold;
+    flex: 1;
+}
+
+.instructions .instruction-description {
+    flex: 8;
+}

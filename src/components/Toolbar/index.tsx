@@ -4,6 +4,7 @@ import { ButtonProps, Button } from "../Button";
 import { SizeUpdater } from "../SizeUpdater";
 import { StepSize } from "../StepSize";
 import { History } from "../History";
+import { Instructions } from "../Instructions";
 
 export interface ToolbarProps {
     playMode?: boolean;
@@ -29,7 +30,7 @@ export function Toolbar({
     defaultSelected,
 }: ToolbarProps) {
     if (playMode) {
-        return null;
+        return <Instructions />;
     }
     return (
         <div className="toolbar rounded-container">
