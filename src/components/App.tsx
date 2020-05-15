@@ -748,6 +748,7 @@ export class App extends React.Component<AppProps, AppState> {
                                         pendingSuggestions={
                                             this.state.pendingSuggestions
                                         }
+                                        playMode={this.state.playMode}
                                     />
                                 ) : (
                                     <GameActionViewer
@@ -774,6 +775,7 @@ export class App extends React.Component<AppProps, AppState> {
                                             ? null
                                             : this.state.pendingSuggestions
                                     }
+                                    playMode={this.state.playMode}
                                 />
                             </div>
                         ),

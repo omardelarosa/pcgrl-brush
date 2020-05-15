@@ -6,8 +6,17 @@
     flex: 1;
     flex-wrap: wrap;
     overflow-y: scroll;
+    width: 100%;
 }
 
 .game-action-symbol {
     margin: 4px;
+}
+
+.game-action-score {
+    margin: 4px;
+}
+
+.game-actions.did-win {
+    background-color: rgb(15, 204, 15);
 }

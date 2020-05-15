@@ -17,6 +17,7 @@ interface StageProps {
     onCellMouseDown?: CellHandler;
     onGhostGridClick?: CellHandler;
     vertical?: boolean;
+    playMode?: boolean;
 }
 
 export function Stage({
@@ -30,6 +31,7 @@ export function Stage({
     pendingSuggestions = {},
     vertical = false,
     classSuffix = "",
+    playMode,
 }: StageProps) {
     return (
         <div
@@ -93,7 +95,9 @@ export function Stage({
                         ) : (
                             <LoadingIndicator />
                         )}
-                        {<div className="grid-label">{gridName}</div>}
+                        {playMode ? null : (
+                            <div className="grid-label">{gridName}</div>
+                        )}
                     </div>
                 )
             )}
