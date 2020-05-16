@@ -29,8 +29,8 @@ const options: Record<string, yargs.Options> = {
         description: "The output path for the generated result.",
     },
     solve: {
-        alias: "s",
-        type: "string",
+        alias: "solve",
+        type: "boolean",
         description: "Solver of map or maps.",
     },
     mapJson: {
@@ -77,7 +77,7 @@ interface CLIArgs {
     [x: string]: unknown;
     // Custom types
     mapJson: string;
-    solve: string;
+    solve: boolean;
     genMap: boolean;
     steps: number;
     radius: number;
@@ -102,6 +102,7 @@ export class CLI {
 
     public solveMapFromJSON(args: CLIArgs) {
         const files = [];
+        console.log("args", args);
         const mapJsonPath: string = args.mapJson;
         if (args.inputFiles) {
             const globbedFiles = glob.sync(args.inputFiles);
@@ -112,7 +113,7 @@ export class CLI {
             files.push(mapJsonPath);
         }
 
-        const results = {};
+        const results: Record<string, any> = {};
 
         const solver = new SolverSokoban(5, 5);
 
