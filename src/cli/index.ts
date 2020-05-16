@@ -133,7 +133,7 @@ export class CLI {
             maps.forEach((map: number[][], i: number) => {
                 let result = null;
                 try {
-                    solver.runGame(map);
+                    result = solver.runGame(map);
                 } catch (e) {
                     console.warn(`error encounted solving: ${f}${i}`);
                 }

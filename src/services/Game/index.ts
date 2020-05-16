@@ -512,10 +512,10 @@ export class SolverSokoban {
 
     public runGame(grid: number[][]) {
         let state = new State(this.width, this.height);
-        let valid = state.initGrid(grid);
-        if (!valid) {
+        let errMsg = state.initGrid(grid);
+        if (errMsg.length > 0) {
             // console.log("invalid map input");
-            return null;
+            return errMsg;
         }
         //console.log(state.bitGrid);
 
@@ -622,22 +622,24 @@ export class State {
                 }
             }
         }
+        let errorMessage: string[] = [];
         // check grid valid
         if (playerCnt !== 1) {
-            return false;
+            errorMessage.push("invalid player count");
         }
         if (this.crates.length !== this.targets.length) {
-            return false;
+            errorMessage.push("crate and target not match");
         }
         this.initDeadlocks();
         for (let pos of this.crates) {
             // init crate at deadlock
             if (this.deadlocks[pos[0]][pos[1]]) {
-                return false;
+                errorMessage.push("crate at deadlock");
+                break
             }
         }
         //console.log(this.deadlocks);
-        return true;
+        return errorMessage;
     }
 
     public copyBitGrid(
