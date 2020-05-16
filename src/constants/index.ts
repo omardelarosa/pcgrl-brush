@@ -1,10 +1,28 @@
-import { SuggestedGrids } from "../services/AppState";
+import { ISuggestion, RepresentationName } from "../services/TensorFlow";
+
+export type SuggestedGrids = Partial<
+    Record<RepresentationName, number[][] | null>
+>;
+export type SuggestionsByType = Partial<
+    Record<RepresentationName, ISuggestion[] | null>
+>;
+
+export interface IModelResult {
+    grid: number[][] | null;
+    repName: any;
+    pendingSuggestions: ISuggestion[];
+}
 
 export const NUMBER_OF_SUGGESTIONS_IN_WIDE = 25;
 
 export const GHOST_LAYER_DEBOUNCE_AMOUNT_MS = 500;
 
 export const SUPPORTED_TILESETS = ["dungeon", "classic"];
+
+export const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
+export const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
+export const DEFAULT_TOOL_RADIUS = 2;
+export const DEFAULT_NUM_STEPS = 1;
 
 export const BOARD_SIZE_PX = 512;
 

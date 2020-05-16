@@ -1,23 +1,18 @@
 import { SidebarButtonNames, ButtonProps } from "../../components/Button";
 import { IconNames } from "../../components/Icons";
 import { TilesetButtonProps } from "../../components/TilesetButton";
-import { RepresentationName, ISuggestion } from "../TensorFlow";
+import { RepresentationName } from "../TensorFlow";
 import { TILES } from "../../constants/tiles";
 import { TensorFlowService } from "../TensorFlow/index";
-
-// Number of rows and tiles in stage grid
-export const DEFAULT_STAGE_GRID_SIZE: [number, number] = [5, 5];
-export const DEFAULT_PLAYER_POS: [number, number] = [2, 2];
-export const DEFAULT_TOOL_RADIUS = 2;
-export const DEFAULT_NUM_STEPS = 1;
+import {
+    SuggestedGrids,
+    SuggestionsByType,
+    DEFAULT_STAGE_GRID_SIZE,
+    DEFAULT_TOOL_RADIUS,
+    DEFAULT_NUM_STEPS,
+} from "../../constants";
 
 type ToolbarButtonNames = SidebarButtonNames;
-export type SuggestedGrids = Partial<
-    Record<RepresentationName, number[][] | null>
->;
-export type SuggestionsByType = Partial<
-    Record<RepresentationName, ISuggestion[] | null>
->;
 
 export interface Checkpoint {
     gridText: string;
