@@ -23,42 +23,10 @@ export class GameService {
     private game: Games;
     public actions: GameAction[];
     public hasWon: boolean = false;
-    private solver: SolverSokoban;
 
     constructor(game: Games) {
         this.game = game;
         this.actions = [];
-        this.solver = new SolverSokoban(5,5);
-
-        // let map = [
-        //     [0,0,0,0,0],
-        //     [0,3,4,3,0],
-        //     [0,3,3,2,4],
-        //     [0,0,4,0,0],
-        //     [4,1,1,1,0]
-        // ];
-        // let map = [
-        //     [0,0,0,0,0],
-        //     [0,0,0,0,0],
-        //     [0,0,2,0,0],
-        //     [0,0,0,0,0],
-        //     [0,0,0,0,0]
-        // ];
-        let map = [
-            [0,0,2,0,0],
-            [4,3,0,3,4],
-            [4,3,3,3,4],
-            [0,0,4,0,0],
-            [0,1,1,1,0]
-        ];
-        // let map = [
-        //     [0,0,0,0,0],
-        //     [0,4,4,3,2],
-        //     [0,4,3,3,0],
-        //     [0,0,0,0,0],
-        //     [0,1,1,1,0]
-        // ];
-        this.solver.runGame(map);
     }
 
     public movePlayer(
@@ -410,23 +378,24 @@ export class SolverSokoban {
 
 export class Node {
     public state: State;
-    public parent: Node|null = null;
+    public parent: Node | null = null;
     public action: number = -1;
 
-    private directions: [number,number][] = [[-1,0],[1,0],[0,-1],[0,1]]; //TODO: should be somewhere else
+    private directions: [number, number][] = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+    ]; //TODO: should be somewhere else
 
-    constructor(
-        state: State,
-        parent: Node|null,
-        action: number
-    ) {
+    constructor(state: State, parent: Node | null, action: number) {
         this.state = state;
         this.parent = parent;
         this.action = action;
     }
 
     public getActions() {
-        let actions: number[]  = [];
+        let actions: number[] = [];
         let current: Node = this;
         while (current.parent !== null) {
             actions.unshift(current.action);
@@ -459,7 +428,7 @@ export class State {
     public width: number;
     public height: number;
     public bitGrid: number[][];
-    public player: [number, number] = [0,0];
+    public player: [number, number] = [0, 0];
     // state
     public deadlocks: boolean[][] = [];
     private targets: [number,number][] = [];
@@ -471,33 +440,31 @@ export class State {
         this.bitGrid = [];
         for (let i = 0; i < this.height; i++) {
             this.bitGrid[i] = [];
-            for (let j=0; j < this.width; j++){
+            for (let j = 0; j < this.width; j++) {
                 this.bitGrid[i][j] = 1;
             }
         }
     }
 
     // from grid with no overlapping elements
-    public initGrid(
-        grid: number[][],
-    ) {
+    public initGrid(grid: number[][]) {
         // TODO: check validity
-        this.player = [-1,-1];
+        this.player = [-1, -1];
         for (let i = 0; i < this.height; i++) {
             for (let j = 0; j < this.width; j++) {
                 if (grid[i][j] !== TILES.PLAYER) {
-                    this.bitGrid[i][j] |= (1 << grid[i][j]);
+                    this.bitGrid[i][j] |= 1 << grid[i][j];
                 } else {
-                    this.bitGrid[i][j] |= (1 << TILES.EMPTY);
+                    this.bitGrid[i][j] |= 1 << TILES.EMPTY;
                 }
                 // update status
                 if (grid[i][j] === TILES.TARGET) {
-                    this.targets.push([i,j]);
+                    this.targets.push([i, j]);
                 } else if (grid[i][j] === TILES.CRATE) {
-                    this.crates.push([i,j]);
+                    this.crates.push([i, j]);
                 } else if (grid[i][j] === TILES.PLAYER) {
                     //if (this.player !== null) { return false;}
-                    this.player = [i,j];
+                    this.player = [i, j];
                 }
             }
         }
@@ -518,10 +485,10 @@ export class State {
                 this.bitGrid[i][j] = bitGrid[i][j];
                 // update status
                 if (bitGrid[i][j] & (1 << TILES.TARGET)) {
-                    this.targets.push([i,j]);
+                    this.targets.push([i, j]);
                 }
                 if (bitGrid[i][j] & (1 << TILES.CRATE)) {
-                    this.crates.push([i,j]);
+                    this.crates.push([i, j]);
                 }
             }
         }
@@ -533,7 +500,7 @@ export class State {
         for (let i = 0; i < this.height; i++) {
             for (let j = 0; j < this.width; j++) {
                 if (this.bitGrid[i][j] & (1 << TILES.CRATE)) {
-                    this.crates.push([i,j]);
+                    this.crates.push([i, j]);
                 }
             }
         }
@@ -633,19 +600,27 @@ export class State {
         //console.log(this.deadlocks);
     }
     public toKey() {
-        let key = this.player[0].toString() + ',' + this.player[1].toString() + '_'
-            + this.crates.length.toString() + '_' + this.targets.length.toString();
+        let key =
+            this.player[0].toString() +
+            "," +
+            this.player[1].toString() +
+            "_" +
+            this.crates.length.toString() +
+            "_" +
+            this.targets.length.toString();
         for (let pos of this.crates) {
-            key += '_' + pos[0].toString() +','+ pos[1].toString();
+            key += "_" + pos[0].toString() + "," + pos[1].toString();
         }
         for (let pos of this.targets) {
-            key += '_' + pos[0].toString() +','+ pos[1].toString();
+            key += "_" + pos[0].toString() + "," + pos[1].toString();
         }
         return key;
     }
 
     public checkWin() {
-        if (this.targets.length !== this.crates.length) { return false; }
+        if (this.targets.length !== this.crates.length) {
+            return false;
+        }
         for (let pos of this.crates) {
             if (!(this.bitGrid[pos[0]][pos[1]] & (1 << TILES.TARGET))) {
                 return false;
@@ -661,7 +636,8 @@ export class State {
             let bestMatch = 0;
             for (let i = 0; i < this.targets.length; i++) {
                 let tpos = this.targets[i];
-                let dist = Math.abs(cpos[0]-tpos[0]) + Math.abs(cpos[1]-tpos[1]);
+                let dist =
+                    Math.abs(cpos[0] - tpos[0]) + Math.abs(cpos[1] - tpos[1]);
                 if (bestDist > dist) {
                     bestMatch = i;
                     bestDist = dist;
@@ -672,30 +648,35 @@ export class State {
         return totalDist;
     }
 
-    public checkOutside(x: number,y: number) {
+    public checkOutside(x: number, y: number) {
         return x < 0 || y < 0 || x >= this.height || y >= this.width;
     }
 
-    public checkMovable(x: number,y: number) {
-        return !(this.checkOutside(x,y)
-            || (this.bitGrid[x][y] & (1 << TILES.SOLID))
-            || (this.bitGrid[x][y] & (1 << TILES.CRATE)));
+    public checkMovable(x: number, y: number) {
+        return !(
+            this.checkOutside(x, y) ||
+            this.bitGrid[x][y] & (1 << TILES.SOLID) ||
+            this.bitGrid[x][y] & (1 << TILES.CRATE)
+        );
     }
     public updateState(dir: [number, number]) {
         let x = this.player[0] + dir[0];
         let y = this.player[1] + dir[1];
-        if (this.checkMovable(x,y)) {
+        if (this.checkMovable(x, y)) {
             this.player[0] = x;
             this.player[1] = y;
             return 1; // simple move
-        } else if (!this.checkOutside(x,y) && this.bitGrid[x][y] & (1 << TILES.CRATE)) {
+        } else if (
+            !this.checkOutside(x, y) &&
+            this.bitGrid[x][y] & (1 << TILES.CRATE)
+        ) {
             let cx = x + dir[0];
             let cy = y + dir[1];
-            if (this.checkMovable(cx,cy)) {
+            if (this.checkMovable(cx, cy)) {
                 this.player[0] = x;
                 this.player[1] = y;
                 this.bitGrid[x][y] &= ~(1 << TILES.CRATE);
-                this.bitGrid[cx][cy] |= (1 << TILES.CRATE);
+                this.bitGrid[cx][cy] |= 1 << TILES.CRATE;
                 this.updateCartes();
                 if (this.deadlocks[cx][cy]) {
                     return 2; //pushed to deadlock
@@ -705,7 +686,6 @@ export class State {
         }
         return 0; // not updated
     }
-
 }
 
 // class BFSAgent(Agent):
@@ -729,18 +709,17 @@ export class State {
 //         return bestNode.getActions(), bestNode, iterations
 
 export class BFSAgent {
-    public getSolution(
-        state: State,
-        maxIterations: number
-    ) {
+    public getSolution(state: State, maxIterations: number) {
         //console.log(state.toKey());
         let iterations = 0;
         let bestNode: Node = new Node(state, null, -1);
         let bestHuristic = -1;
-        let queue:Node[] = [new Node(state, null, -1)];
+        let queue: Node[] = [new Node(state, null, -1)];
         let visited = new Set<string>();
-        while( queue.length > 0 &&
-                (iterations < maxIterations || maxIterations <= 0)) {
+        while (
+            queue.length > 0 &&
+            (iterations < maxIterations || maxIterations <= 0)
+        ) {
             iterations += 1;
             let current: Node = queue.shift()!;
             //console.log(current);
@@ -748,16 +727,17 @@ export class BFSAgent {
                 return {
                     actions: current.getActions(),
                     node: current,
-                    iterations: iterations
-                }
+                    iterations: iterations,
+                };
             }
             if (!visited.has(current.state.toKey())) {
-                let h= current.state.getHuristic();
+                let h = current.state.getHuristic();
                 //console.log(h);
                 if (bestHuristic === -1 || h < bestHuristic) {
                     bestNode = current;
                     bestHuristic = h;
-                } else if (h === bestHuristic && current) {// best node not null
+                } else if (h === bestHuristic && current) {
+                    // best node not null
                     bestNode = current;
                     bestHuristic = h;
                 }
@@ -770,7 +750,7 @@ export class BFSAgent {
         return {
             actions: bestNode.getActions(),
             node: bestNode,
-            iterations: iterations
-        }
+            iterations: iterations,
+        };
     }
 }

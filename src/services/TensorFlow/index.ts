@@ -4,10 +4,12 @@ import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
 import { TILES, TILES_TO_CHAR, CHAR_TO_TILE } from "../../constants/tiles";
 import { isEmpty, argSort, diffGrids } from "../Utils/index";
-import { SuggestionsByType } from "../AppState";
-import { IModelResult } from "../../components/App";
-import { MODEL_SUGGESTION_TIMEOUT_MS } from "../../constants";
-import { DEFAULT_PLAYER_POS } from "../AppState/index";
+import {
+    MODEL_SUGGESTION_TIMEOUT_MS,
+    SuggestionsByType,
+    IModelResult,
+    DEFAULT_PLAYER_POS,
+} from "../../constants";
 import _ from "lodash";
 
 // Testing basic functionality of tensorflow using code from:

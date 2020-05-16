@@ -2,7 +2,7 @@ import React from "react";
 import "./styles.css";
 import { Grid, noop } from "../Grid";
 import { CellHandler } from "../Grid/index";
-import { SuggestedGrids, SuggestionsByType } from "../../services/AppState";
+import { SuggestedGrids, SuggestionsByType } from "../../constants";
 import { RepresentationName } from "../../services/TensorFlow";
 import { LoadingIndicator } from "../LoadingIndicator";
 
