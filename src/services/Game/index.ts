@@ -37,6 +37,13 @@ export class GameService {
         //     [0,0,4,0,0],
         //     [4,1,1,1,0]
         // ];
+        // let map = [
+        //     [0,0,0,0,0],
+        //     [0,0,0,0,0],
+        //     [0,0,2,0,0],
+        //     [0,0,0,0,0],
+        //     [0,0,0,0,0]
+        // ];
         let map = [
             [0,0,2,0,0],
             [4,3,0,3,4],
@@ -437,13 +444,10 @@ export class Node {
             // console.log(childState.toKey());
             // console.log(res);
             // console.log(childState.checkWin());
-            if (res === 0) { // not updated
-                continue;
-            } else if (res === 1) { // simple move
+            if (res === 1) { // simple move
                 children.push(new Node(childState, this, d));
-            } else if (res === 2) { // crate pushed
+            } else if (res === 3) { // crate pushed not dead lock
                 children.push(new Node(childState, this, d));
-                //TODO
             }
         }
         return children;
@@ -457,7 +461,7 @@ export class State {
     public bitGrid: number[][];
     public player: [number, number] = [0,0];
     // state
-    private deadlocks: number[][] = [];
+    public deadlocks: boolean[][] = [];
     private targets: [number,number][] = [];
     private crates: [number,number][] = [];
 
@@ -497,14 +501,18 @@ export class State {
                 }
             }
         }
+        this.initDeadlocks();
+        console.log(this.deadlocks);
         return true;
     }
 
     public copyBitGrid(
         bitGrid: number[][],
-        player: [number, number]
+        player: [number, number],
+        deadlocks: boolean[][]
     ) {
         this.player = [player[0], player[1]];
+        this.deadlocks = deadlocks; // sharing one deadlock map
         for (let i = 0; i < this.height; i++) {
             for (let j = 0; j < this.width; j++) {
                 this.bitGrid[i][j] = bitGrid[i][j];
@@ -533,9 +541,97 @@ export class State {
 
     public getCopy() {
         return new State(this.width, this.height)
-                .copyBitGrid(this.bitGrid, this.player);
+                .copyBitGrid(this.bitGrid, this.player, this.deadlocks);
     }
 
+    public initDeadlocks() {
+        let solidMask = 1 << TILES.SOLID;
+        let targetSolidMask = (1 << TILES.SOLID) | 1 << TILES.TARGET;
+        let bitGridExtended: number[][] = [];
+        for (let i = 0; i <= this.height+1; i++) {
+            bitGridExtended[i] = [];
+        }
+        for (let i = 0; i < this.height; i++) {
+            this.deadlocks.push([]);
+            this.deadlocks[i] = new Array(this.width).fill(false);
+            for (let j=0; j < this.width; j++){
+                bitGridExtended[i+1][j+1] = this.bitGrid[i][j];
+            }
+        }
+        for (let i = 0; i <= this.height+1; i++) {
+            bitGridExtended[i][0] = solidMask;
+            bitGridExtended[i][this.width+1] = solidMask;
+        }
+        for (let j = 0; j <= this.width+1; j++) {
+            bitGridExtended[0][j] = solidMask;
+            bitGridExtended[this.height+1][j] = solidMask;
+        }
+        //console.log(bitGridExtended);
+        let corners: [number,number][] = [];
+        for (let i = 1; i <= this.height; i++) {
+            this.deadlocks[i] = [];
+            // if (self.solid[y-1][x] and self.solid[y][x-1]) 
+            // or (self.solid[y-1][x] and self.solid[y][x+1])
+            // or (self.solid[y+1][x] and self.solid[y][x-1])
+            // or (self.solid[y+1][x] and self.solid[y][x+1]):
+            for (let j = 1; j <= this.width; j++){
+                if (bitGridExtended[i][j] & targetSolidMask) { continue; }
+                if (((bitGridExtended[i-1][j] & solidMask)
+                        && (bitGridExtended[i][j-1] & solidMask))
+                  ||((bitGridExtended[i-1][j] & solidMask)
+                        && (bitGridExtended[i][j+1] & solidMask))
+                  ||((bitGridExtended[i+1][j] & solidMask)
+                        && (bitGridExtended[i][j-1] & solidMask))
+                  ||((bitGridExtended[i+1][j] & solidMask)
+                        && (bitGridExtended[i][j+1] & solidMask))) {
+                    corners.push([i,j]);
+                    this.deadlocks[i-1][j-1] = true;
+                }
+
+            }
+        }
+        // console.log(corners);
+        // console.log(this.deadlocks);
+        for (let c1 of corners) {
+            for (let c2 of corners) {
+                let dx = c1[0] - c2[0];
+                let dy = c1[1] - c2[1];
+                if ((dx === 0 && dy === 0) || (dx !== 0) && (dy !== 0)) {
+                    continue;
+                }
+                let walls: [number,number][] = [];
+                let x = c2[0], y = c2[1];
+                if (dx > 0) {
+                    let step = dx / Math.abs(dx);
+                    for (let i = x + step; i != c1[0]; i += step) {
+                        if ((bitGridExtended[i][y] & targetSolidMask) ||
+                            !((bitGridExtended[i][y-1] & solidMask) ||
+                            (bitGridExtended[i][y+1] & solidMask))) {
+                            walls = [];
+                            break;
+                        }
+                        walls.push([i,y]);
+                    }
+                }
+                if (dy > 0) {
+                    let step = dy / Math.abs(dy);
+                    for (let i = y + step; i != c1[1]; i += step) {
+                        if ((bitGridExtended[x][i] & targetSolidMask) ||
+                            !((bitGridExtended[x-1][i] & solidMask) ||
+                            (bitGridExtended[x+1][i] & solidMask))) {
+                            walls = [];
+                            break;
+                        }
+                        walls.push([x,i]);
+                    }
+                }
+                for (let w of walls) {
+                    this.deadlocks[w[0]-1][w[1]-1] = true;
+                }
+            }
+        }
+        //console.log(this.deadlocks);
+    }
     public toKey() {
         let key = this.player[0].toString() + ',' + this.player[1].toString() + '_'
             + this.crates.length.toString() + '_' + this.targets.length.toString();
@@ -601,7 +697,10 @@ export class State {
                 this.bitGrid[x][y] &= ~(1 << TILES.CRATE);
                 this.bitGrid[cx][cy] |= (1 << TILES.CRATE);
                 this.updateCartes();
-                return 2; // push crate
+                if (this.deadlocks[cx][cy]) {
+                    return 2; //pushed to deadlock
+                }
+                return 3; // push crate
             }
         }
         return 0; // not updated
