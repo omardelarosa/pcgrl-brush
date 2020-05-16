@@ -5,8 +5,6 @@ import {
     MULTITILE_PLAYER_TARGET,
 } from "../../constants/tiles";
 import { ACTIONS } from "../../constants";
-import { abs } from "numjs";
-import { timingSafeEqual } from "crypto";
 
 export enum Games {
     SOKOBAN,
@@ -367,7 +365,8 @@ export class SolverSokoban {
 
     public runGame(grid: number[][]) {
         let state = new State(this.width, this.height);
-        state.initGrid(grid);
+        let valid = state.initGrid(grid);
+        if (!valid) { console.log('invalid map input'); return null; }
         //console.log(state.bitGrid);
 
         let bfs = new BFSAgent();
@@ -449,14 +448,11 @@ export class State {
     // from grid with no overlapping elements
     public initGrid(grid: number[][]) {
         // TODO: check validity
+        let playerCnt = 0;
         this.player = [-1, -1];
         for (let i = 0; i < this.height; i++) {
             for (let j = 0; j < this.width; j++) {
-                if (grid[i][j] !== TILES.PLAYER) {
-                    this.bitGrid[i][j] |= 1 << grid[i][j];
-                } else {
-                    this.bitGrid[i][j] |= 1 << TILES.EMPTY;
-                }
+                this.bitGrid[i][j] = 1 << grid[i][j];
                 // update status
                 if (grid[i][j] === TILES.TARGET) {
                     this.targets.push([i, j]);
@@ -464,12 +460,22 @@ export class State {
                     this.crates.push([i, j]);
                 } else if (grid[i][j] === TILES.PLAYER) {
                     //if (this.player !== null) { return false;}
+                    this.bitGrid[i][j] = 1 << TILES.EMPTY;
+                    playerCnt += 1;
                     this.player = [i, j];
                 }
             }
         }
+        // check grid valid
+        if (playerCnt !== 1) { return false; }
+        if (this.crates.length !== this.targets.length) { return false; }
         this.initDeadlocks();
-        console.log(this.deadlocks);
+        for (let pos of this.crates) { // init crate at deadlock
+            if (this.deadlocks[pos[0]][pos[1]]) {
+                return false;
+            }
+        }
+        //console.log(this.deadlocks);
         return true;
     }
 
@@ -513,7 +519,7 @@ export class State {
 
     public initDeadlocks() {
         let solidMask = 1 << TILES.SOLID;
-        let targetSolidMask = (1 << TILES.SOLID) | 1 << TILES.TARGET;
+        let targetSolidMask = (1 << TILES.SOLID) | (1 << TILES.TARGET);
         let bitGridExtended: number[][] = [];
         for (let i = 0; i <= this.height+1; i++) {
             bitGridExtended[i] = [];
@@ -563,14 +569,14 @@ export class State {
             for (let c2 of corners) {
                 let dx = c1[0] - c2[0];
                 let dy = c1[1] - c2[1];
-                if ((dx === 0 && dy === 0) || (dx !== 0) && (dy !== 0)) {
+                if ((dx === 0 && dy === 0) || (dx !== 0 && dy !== 0)) {
                     continue;
                 }
                 let walls: [number,number][] = [];
                 let x = c2[0], y = c2[1];
                 if (dx > 0) {
                     let step = dx / Math.abs(dx);
-                    for (let i = x + step; i != c1[0]; i += step) {
+                    for (let i = x + step; i !== c1[0]; i += step) {
                         if ((bitGridExtended[i][y] & targetSolidMask) ||
                             !((bitGridExtended[i][y-1] & solidMask) ||
                             (bitGridExtended[i][y+1] & solidMask))) {
@@ -582,7 +588,7 @@ export class State {
                 }
                 if (dy > 0) {
                     let step = dy / Math.abs(dy);
-                    for (let i = y + step; i != c1[1]; i += step) {
+                    for (let i = y + step; i !== c1[1]; i += step) {
                         if ((bitGridExtended[x][i] & targetSolidMask) ||
                             !((bitGridExtended[x-1][i] & solidMask) ||
                             (bitGridExtended[x+1][i] & solidMask))) {
@@ -611,9 +617,9 @@ export class State {
         for (let pos of this.crates) {
             key += "_" + pos[0].toString() + "," + pos[1].toString();
         }
-        for (let pos of this.targets) {
-            key += "_" + pos[0].toString() + "," + pos[1].toString();
-        }
+        // for (let pos of this.targets) {
+        //     key += "_" + pos[0].toString() + "," + pos[1].toString();
+        // }
         return key;
     }
 
