@@ -4,4 +4,6 @@
 ./node_modules/.bin/ts-node \
     --project tsconfig.cli.json \
     src/cli/index.ts \
-    --genMap
+    --genMap \
+    --outputPath data/generated_maps/ \
+    --name "generated_map"

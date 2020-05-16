@@ -24,6 +24,11 @@ export interface GameAction {
     action: ACTIONS;
 }
 
+export interface GeneratedMapResults {
+    grids: number[][][];
+    selectedAgents: RepresentationName[];
+}
+
 export class GameService {
     private game: Games;
     public actions: GameAction[];
@@ -360,19 +365,27 @@ export class GameService {
         return false;
     }
 
-    public generateRandomMap(): number[][] {
+    /**
+     *
+     * @param iterations number of times to run the model
+     * @param steps number of steps per model run
+     * @param toolRadius tool radius determining the von nuemann neighborhood of tooltip
+     * @param timeout number of milliseconds to wait before timing out
+     */
+    public async generateRandomMap(
+        iterations: number,
+        steps: number,
+        toolRadius: number,
+        timeout: number
+    ): Promise<GeneratedMapResults> {
         const size = DEFAULT_STAGE_GRID_SIZE;
 
         // TODO: create a random initial state
         const { grid } = TensorFlowService.createGameGrid(size);
-
-        const steps = 1; // number of steps per model run
-        const toolRadius = 3; // tool radius
-        const iterations = 10; // number of times to run the model
         let nextGrid = grid;
 
         const clickedTile = DEFAULT_PLAYER_POS; // center tile?
-        const timeoutMS = 10000; // 10sec?
+        const timeoutMS = timeout; // number
 
         // Create a bound function for applying updates
         const applyUpdateToGrid = (
@@ -435,8 +448,9 @@ export class GameService {
                 });
         };
 
+        let hasTimedOut = false;
         const timer = setTimeout(() => {
-            console.log("hello!");
+            hasTimedOut = true;
         }, timeoutMS);
 
         const tfService = new TensorFlowService();
@@ -445,12 +459,18 @@ export class GameService {
         let counter = 1;
 
         const looper = async () => {
-            let results: {
-                grids: number[][][];
-                selectedAgents: RepresentationName[];
-            } = { grids: [], selectedAgents: [] };
+            let results: GeneratedMapResults = {
+                grids: [],
+                selectedAgents: [],
+            };
 
             for (let counter = 1; counter <= iterations; counter++) {
+                if (hasTimedOut) {
+                    console.warn(
+                        "timed out when creating level.  canceling further operations"
+                    );
+                    break;
+                }
                 const res = await worker(counter, nextGrid);
                 const agents = Object.keys(res.suggestedGrids);
                 // const num_agents = agents.length;
@@ -478,11 +498,10 @@ export class GameService {
             return results;
         };
 
-        looper().then((results) => {
-            console.log("results:", results);
+        return looper().then((results) => {
             clearTimeout(timer);
+            return results;
         });
-        return grid;
     }
 }
 
