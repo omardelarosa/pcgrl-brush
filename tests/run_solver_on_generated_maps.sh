@@ -5,4 +5,7 @@
     --project tsconfig.cli.json \
     src/cli/index.ts \
     --solve \
+    --o "data/test_results" \
+    --name "generated_maps" \
     --f "data/generated_maps/*.map.json"
+    # --f "data/generated_maps/s5_r3_i20_*.map.json"

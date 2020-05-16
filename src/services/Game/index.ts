@@ -521,7 +521,11 @@ export class SolverSokoban {
 
         let bfs = new BFSAgent();
         let res = bfs.getSolution(state, 20000);
-        console.log(res);
+        // console.log(res);
+        return {
+            actions: res.actions,
+            iterations: res.iterations,
+        };
     }
 }
 
