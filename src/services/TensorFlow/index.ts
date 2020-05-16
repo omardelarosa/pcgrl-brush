@@ -214,9 +214,9 @@ export class TensorFlowService {
             if (typeof model !== "undefined") {
                 const modelPath = `${MODEL_URLS[key as RepresentationName]}`;
                 const url = `${baseUrl}${modelPath}`;
-                console.log("url: ", key, url);
+                //console.log("url: ", key, url);
                 model = await tf.loadGraphModel(url);
-                console.log("Loaded model: ", model);
+                //console.log("Loaded model: ", model);
             }
             fetchedModels[key as RepresentationName] = model;
         }
