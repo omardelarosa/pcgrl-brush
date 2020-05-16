@@ -514,7 +514,7 @@ export class SolverSokoban {
         let state = new State(this.width, this.height);
         let valid = state.initGrid(grid);
         if (!valid) {
-            console.log("invalid map input");
+            // console.log("invalid map input");
             return null;
         }
         //console.log(state.bitGrid);

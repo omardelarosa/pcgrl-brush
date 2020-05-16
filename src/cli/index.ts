@@ -118,20 +118,24 @@ export class CLI {
         const solver = new SolverSokoban(5, 5);
 
         files.forEach((f) => {
+            console.log("solving: ", f);
             const jsonString: Buffer = fs.readFileSync(f);
-            let map = JSON.parse(jsonString.toString());
-            let result = null;
-            try {
-                solver.runGame(map);
-            } catch (e) {
-                console.warn(`error encounted solving: ${f}`);
-            }
-
-            if (result) {
-                results[f] = result;
-            } else {
-                results[f] = null;
-            }
+            let mapResults = JSON.parse(jsonString.toString());
+            const maps = mapResults.grids;
+            results[f] = [];
+            maps.forEach((map: number[][], i: number) => {
+                let result = null;
+                try {
+                    solver.runGame(map);
+                } catch (e) {
+                    console.warn(`error encounted solving: ${f}${i}`);
+                }
+                if (result) {
+                    results[f].push(result);
+                } else {
+                    results[f].push(null);
+                }
+            });
         });
 
         // Write file or log.
