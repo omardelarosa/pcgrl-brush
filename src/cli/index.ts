@@ -2,6 +2,7 @@ import "@tensorflow/tfjs-node"; // improves TF performance on node
 import * as yargs from "yargs";
 import * as fs from "fs";
 import * as path from "path";
+import * as glob from "glob";
 import { GameService, Games, SolverSokoban } from "../services/Game";
 import _ from "lodash";
 import { GeneratedMapResults } from "../services/Game/index";
@@ -26,6 +27,11 @@ const options: Record<string, yargs.Options> = {
         alias: "o",
         type: "string",
         description: "The output path for the generated result.",
+    },
+    solve: {
+        alias: "s",
+        type: "string",
+        description: "Solver of map or maps.",
     },
     mapJson: {
         alias: "m",
@@ -57,6 +63,11 @@ const options: Record<string, yargs.Options> = {
             "The number of milliseconds to wait before timing out an operation.",
         default: 5000,
     },
+    inputFiles: {
+        alias: "f",
+        type: "string",
+        describe: "Input files (supports globbing).",
+    },
 };
 
 interface CLIArgs {
@@ -66,6 +77,7 @@ interface CLIArgs {
     [x: string]: unknown;
     // Custom types
     mapJson: string;
+    solve: string;
     genMap: boolean;
     steps: number;
     radius: number;
@@ -73,6 +85,7 @@ interface CLIArgs {
     outputPath: string;
     name: string;
     timeout: number;
+    inputFiles: string;
 }
 
 // Initialize yargs library, define commans
@@ -80,23 +93,64 @@ const argv = yargs.options(options).argv as CLIArgs;
 
 export class CLI {
     constructor(args: CLIArgs) {
-        if (args.mapJson) {
-            this.solveMapFromJSON(args.mapJson);
+        if (args.mapJson || args.solve) {
+            this.solveMapFromJSON(args);
         } else if (args.genMap) {
             this.generateJSONMap(args);
         }
     }
 
-    public solveMapFromJSON(mapJsonPath: string) {
-        const jsonString: Buffer = fs.readFileSync(mapJsonPath);
-        let map = JSON.parse(jsonString.toString());
+    public solveMapFromJSON(args: CLIArgs) {
+        const files = [];
+        const mapJsonPath: string = args.mapJson;
+        if (args.inputFiles) {
+            const globbedFiles = glob.sync(args.inputFiles);
+            globbedFiles.forEach((f) => files.push(f));
+        }
+
+        if (mapJsonPath) {
+            files.push(mapJsonPath);
+        }
+
+        const results = {};
+
         const solver = new SolverSokoban(5, 5);
-        solver.runGame(map);
-        console.log("solver:", solver);
+
+        files.forEach((f) => {
+            const jsonString: Buffer = fs.readFileSync(f);
+            let map = JSON.parse(jsonString.toString());
+            let result = null;
+            try {
+                solver.runGame(map);
+            } catch (e) {
+                console.warn(`error encounted solving: ${f}`);
+            }
+
+            if (result) {
+                results[f] = result;
+            } else {
+                results[f] = null;
+            }
+        });
+
+        // Write file or log.
+        if (args.outputPath) {
+            let outFileName = args.name || "solutions";
+            let outFilePath = args.outputPath;
+
+            const resultsJson = JSON.stringify(results);
+
+            // Write results to file
+            fs.writeFileSync(
+                path.join(outFilePath, `${outFileName}.solutions.json`),
+                resultsJson
+            );
+        } else {
+            console.log("results: ", results);
+        }
     }
 
     public generateJSONMap(args: CLIArgs) {
-        console.log("Random Map!");
         const gs = new GameService(Games.SOKOBAN);
         gs.generateRandomMap(
             args.iterations,
@@ -127,6 +181,8 @@ export class CLI {
             }
         });
     }
+
+    public solveMaps(args: CLIArgs) {}
 }
 
 new CLI(argv);

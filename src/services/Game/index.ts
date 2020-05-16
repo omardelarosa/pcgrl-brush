@@ -484,11 +484,7 @@ export class GameService {
                     clearTimeout(timer);
                     throw new Error("Invalid agent selected: " + selectedAgent);
                 }
-                console.log(
-                    `iteration[${counter}]`,
-                    selectedAgent,
-                    selectedGrid
-                );
+                console.log(`iteration[${counter}]`, selectedAgent);
                 results.grids.push(selectedGrid);
                 results.selectedAgents.push(
                     selectedAgent as RepresentationName
