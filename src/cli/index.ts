@@ -121,7 +121,7 @@ export class CLI {
             console.log("solving: ", f);
             const jsonString: Buffer = fs.readFileSync(f);
             let mapResults = JSON.parse(jsonString.toString());
-            const maps = [];
+            let maps = [];
             // Case 1. results file, multiple maps
             if (/results\.json$/.test(f)) {
                 maps = mapResults.grids;
