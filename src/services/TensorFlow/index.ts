@@ -210,7 +210,15 @@ export class TensorFlowService {
 
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
-        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        let baseUrl = "";
+
+        // NodeEnv
+        if (typeof window === "undefined") {
+            baseUrl = `http://localhost:3000`;
+            // BrowserEnv
+        } else {
+            baseUrl = `${window.location.protocol}//${window.location.host}`;
+        }
         for (let key in MODEL_URLS) {
             let model: any = this.models[key as RepresentationName];
             if (typeof model !== "undefined") {

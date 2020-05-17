@@ -14,7 +14,7 @@ import {
     REPRESENTATION_NAMES_DICT,
     ISuggestion,
 } from "../services/TensorFlow";
-import { AppStateService, AppState, Checkpoint } from "../services/AppState";
+import { AppStateService, AppState } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
 import { TILES, CENTER_TILE_POS } from "../constants/tiles";
@@ -31,6 +31,7 @@ import {
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
     DEFAULT_PLAYER_POS,
+    Checkpoint,
 } from "../constants";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow";
 import { Footer } from "./Footer";
@@ -52,12 +53,6 @@ export class App extends React.Component<AppProps, AppState> {
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
-
-        // Attaches services to window object for debugging.
-        (window as any).__PCGRL = {
-            tf: this.tfService,
-            gs: this.gameService,
-        };
     }
 
     public componentDidMount() {

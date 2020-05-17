@@ -12,7 +12,6 @@ import {
     DEFAULT_PLAYER_POS,
 } from "../../constants/index";
 import _ from "lodash";
-import { Children } from "react";
 
 export enum Games {
     SOKOBAN,
