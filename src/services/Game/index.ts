@@ -521,12 +521,25 @@ export class SolverSokoban {
         let bfs  = new BFSAgent();
         let ast = new AStarAgent();
         let resA = ast.getSolution(state, 20000);
-        if (resA.node.state.checkWin()) { return resA; }
+        if (resA.node.state.checkWin()) {
+            return {
+                'actions': resA.actions,
+                'iterations': resA.iterations
+            };
+        }
         let resB = bfs.getSolution(state, 20000);
-        if (resB.node.state.checkWin()) { return resB; }
+        if (resB.node.state.checkWin()) {
+            return {
+                'actions': resA.actions,
+                'iterations': resA.iterations
+            };
+        }
         //console.log(resB);
         //console.log(resA);
-        return resA;
+        return {
+            'actions': resA.actions,
+            'iterations': resA.iterations
+        };
     }
 }
 
