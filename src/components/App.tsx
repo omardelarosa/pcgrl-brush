@@ -14,14 +14,7 @@ import {
     REPRESENTATION_NAMES_DICT,
     ISuggestion,
 } from "../services/TensorFlow";
-import {
-    AppStateService,
-    AppState,
-    SuggestedGrids,
-    SuggestionsByType,
-    DEFAULT_PLAYER_POS,
-    Checkpoint,
-} from "../services/AppState";
+import { AppStateService, AppState } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
 import { TILES, CENTER_TILE_POS } from "../constants/tiles";
@@ -32,12 +25,14 @@ import {
     ValidKeysType,
     ACTIONS,
     MAX_GRID_HISTORY_LENGTH,
-} from "../constants";
-import {
+    SuggestionsByType,
+    SuggestedGrids,
     DEFAULT_NUM_STEPS,
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
-} from "../services/AppState";
+    DEFAULT_PLAYER_POS,
+    Checkpoint,
+} from "../constants";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow";
 import { Footer } from "./Footer";
 import { KEY_MAPPINGS } from "../constants";
@@ -49,11 +44,6 @@ interface AppProps {
     queryState?: Checkpoint | null;
 }
 
-export interface IModelResult {
-    grid: number[][] | null;
-    repName: any;
-    pendingSuggestions: ISuggestion[];
-}
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
     private gameService: GameService;
@@ -63,12 +53,6 @@ export class App extends React.Component<AppProps, AppState> {
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
-
-        // Attaches services to window object for debugging.
-        (window as any).__PCGRL = {
-            tf: this.tfService,
-            gs: this.gameService,
-        };
     }
 
     public componentDidMount() {

@@ -4,10 +4,12 @@ import { Tensor, Tensor2D } from "@tensorflow/tfjs";
 
 import { TILES, TILES_TO_CHAR, CHAR_TO_TILE } from "../../constants/tiles";
 import { isEmpty, argSort, diffGrids } from "../Utils/index";
-import { SuggestionsByType } from "../AppState";
-import { IModelResult } from "../../components/App";
-import { MODEL_SUGGESTION_TIMEOUT_MS } from "../../constants";
-import { DEFAULT_PLAYER_POS } from "../AppState/index";
+import {
+    MODEL_SUGGESTION_TIMEOUT_MS,
+    SuggestionsByType,
+    IModelResult,
+    DEFAULT_PLAYER_POS,
+} from "../../constants";
 import _ from "lodash";
 
 // Testing basic functionality of tensorflow using code from:
@@ -208,15 +210,23 @@ export class TensorFlowService {
 
     async fetchModels(): Promise<ModelsDictionary> {
         const fetchedModels: ModelsDictionary = {};
-        const baseUrl = `${window.location.protocol}//${window.location.host}`;
+        let baseUrl = "";
+
+        // NodeEnv
+        if (typeof window === "undefined") {
+            baseUrl = `http://localhost:3000`;
+            // BrowserEnv
+        } else {
+            baseUrl = `${window.location.protocol}//${window.location.host}`;
+        }
         for (let key in MODEL_URLS) {
             let model: any = this.models[key as RepresentationName];
             if (typeof model !== "undefined") {
                 const modelPath = `${MODEL_URLS[key as RepresentationName]}`;
                 const url = `${baseUrl}${modelPath}`;
-                console.log("url: ", key, url);
+                //console.log("url: ", key, url);
                 model = await tf.loadGraphModel(url);
-                console.log("Loaded model: ", model);
+                //console.log("Loaded model: ", model);
             }
             fetchedModels[key as RepresentationName] = model;
         }

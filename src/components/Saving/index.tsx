@@ -1,7 +1,7 @@
 import React from "react";
 import "./styles.css";
-import { Checkpoint } from "../../services/AppState";
 import { QueryService } from "../../services/Query/index";
+import { Checkpoint } from "../../constants";
 
 export function Saving({
     checkpoints,
