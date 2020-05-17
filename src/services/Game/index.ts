@@ -1,10 +1,18 @@
-import { TensorFlowService } from "../TensorFlow";
+import { TensorFlowService, RepresentationName } from "../TensorFlow";
 import {
     TILES,
     MULTITILE_CRATE_TARGET,
     MULTITILE_PLAYER_TARGET,
 } from "../../constants/tiles";
-import { ACTIONS } from "../../constants";
+import { ACTIONS, EMPTY_SUGGESTED_GRIDS } from "../../constants";
+import { abs } from "numjs";
+import { timingSafeEqual } from "crypto";
+import {
+    DEFAULT_STAGE_GRID_SIZE,
+    DEFAULT_PLAYER_POS,
+} from "../../constants/index";
+import _ from "lodash";
+import { Children } from "react";
 
 export enum Games {
     SOKOBAN,
@@ -15,6 +23,11 @@ export interface GameAction {
     name: string;
     value: any;
     action: ACTIONS;
+}
+
+export interface GeneratedMapResults {
+    grids: number[][][];
+    selectedAgents: RepresentationName[];
 }
 
 export class GameService {
@@ -352,6 +365,141 @@ export class GameService {
         }
         return false;
     }
+
+    /**
+     *
+     * @param iterations number of times to run the model
+     * @param steps number of steps per model run
+     * @param toolRadius tool radius determining the von nuemann neighborhood of tooltip
+     * @param timeout number of milliseconds to wait before timing out
+     */
+    public async generateRandomMap(
+        iterations: number,
+        steps: number,
+        toolRadius: number,
+        timeout: number
+    ): Promise<GeneratedMapResults> {
+        const size = DEFAULT_STAGE_GRID_SIZE;
+
+        // TODO: create a random initial state
+        const { grid } = TensorFlowService.createGameGrid(size);
+        let nextGrid = grid;
+
+        const clickedTile = DEFAULT_PLAYER_POS; // center tile?
+        const timeoutMS = timeout; // number
+
+        // Create a bound function for applying updates
+        const applyUpdateToGrid = (
+            grid: number[][],
+            pos: [number, number],
+            tile: number
+        ) => {
+            return gs.applyUpdateToGrid(grid, pos, tile, size);
+        };
+
+        // Worker
+        const worker = async (n: number, nextGrid: number[][]) => {
+            return tfService
+                .generateModelSuggestions(
+                    grid,
+                    "user",
+                    size,
+                    toolRadius,
+                    steps,
+                    clickedTile,
+                    applyUpdateToGrid
+                )
+                .then((results) => {
+                    // 2. Process model results and apply data changes in component.
+
+                    // Save the suggestion in the state update
+                    const suggestedGrids = { ...EMPTY_SUGGESTED_GRIDS };
+                    const pendingSuggestions = {} as any;
+                    results.forEach((result: any) => {
+                        if (result) {
+                            const key = result.repName as RepresentationName;
+                            if (typeof key !== "undefined" && key !== null) {
+                                suggestedGrids[key] = result.grid;
+                                pendingSuggestions[key] =
+                                    result.pendingSuggestions;
+                            }
+                        }
+                    });
+                    // console.log("pending_suggestions:", pendingSuggestions);
+
+                    const majorityVoteData = tfService.generateMajorityVoteGrid(
+                        pendingSuggestions,
+                        nextGrid,
+                        applyUpdateToGrid
+                    );
+                    if (majorityVoteData) {
+                        suggestedGrids["majority"] = majorityVoteData.grid;
+                        pendingSuggestions["majority"] =
+                            majorityVoteData.pendingSuggestions;
+                        pendingSuggestions["user"] =
+                            majorityVoteData.pendingSuggestions;
+                    } else {
+                        suggestedGrids["majority"] = nextGrid;
+                        pendingSuggestions["majority"] = [];
+                    }
+                    return {
+                        suggestedGrids,
+                        pendingSuggestions,
+                    };
+                });
+        };
+
+        let hasTimedOut = false;
+        const timer = setTimeout(() => {
+            hasTimedOut = true;
+        }, timeoutMS);
+
+        const tfService = new TensorFlowService();
+        const gs = new GameService(Games.SOKOBAN);
+
+        let counter = 1;
+
+        const looper = async () => {
+            let results: GeneratedMapResults = {
+                grids: [],
+                selectedAgents: [],
+            };
+
+            for (let counter = 1; counter <= iterations; counter++) {
+                if (hasTimedOut) {
+                    console.warn(
+                        "timed out when creating level.  canceling further operations"
+                    );
+                    break;
+                }
+                const res = await worker(counter, nextGrid);
+                const agents = Object.keys(res.suggestedGrids);
+                // const num_agents = agents.length;
+                // const randInt = Math.round(Math.random() * num_agents);
+                let selectedAgent = _.sample(agents);
+                let selectedGrid: any = null;
+                if (selectedAgent) {
+                    selectedGrid =
+                        res.suggestedGrids[selectedAgent as RepresentationName];
+                } else {
+                    clearTimeout(timer);
+                    throw new Error("Invalid agent selected: " + selectedAgent);
+                }
+                console.log(`iteration[${counter}]`, selectedAgent);
+                results.grids.push(selectedGrid);
+                results.selectedAgents.push(
+                    selectedAgent as RepresentationName
+                );
+            }
+
+            return results;
+        };
+
+        return looper().then((results) => {
+            clearTimeout(timer);
+            return results;
+        });
+    }
 }
 
 export class SolverSokoban {
@@ -365,20 +513,30 @@ export class SolverSokoban {
 
     public runGame(grid: number[][]) {
         let state = new State(this.width, this.height);
-        let valid = state.initGrid(grid);
-        if (!valid) { console.log('invalid map input'); return null; }
+        let errMsg = state.initGrid(grid);
+        if (errMsg.length > 0) {
+            // console.log("invalid map input");
+            return errMsg;
+        }
         //console.log(state.bitGrid);
-
-        let bfs = new BFSAgent();
-        let res = bfs.getSolution(state, 20000);
-        console.log(res);
+        let bfs  = new BFSAgent();
+        let ast = new AStarAgent();
+        let resA = ast.getSolution(state, 20000);
+        if (resA.node.state.checkWin()) { return resA; }
+        let resB = bfs.getSolution(state, 20000);
+        if (resB.node.state.checkWin()) { return resB; }
+        //console.log(resB);
+        //console.log(resA);
+        return resA;
     }
 }
 
 export class Node {
     public state: State;
     public parent: Node | null = null;
+    public depth: number = 0;
     public action: number = -1;
+    public huristic: number = -1;
 
     private directions: [number, number][] = [
         [-1, 0],
@@ -387,10 +545,12 @@ export class Node {
         [0, 1],
     ]; //TODO: should be somewhere else
 
-    constructor(state: State, parent: Node | null, action: number) {
+    constructor(state: State, parent: Node | null, action: number, depth: number) {
         this.state = state;
         this.parent = parent;
         this.action = action;
+        this.depth = depth;
+        this.huristic = this.depth + state.getHuristic();
     }
 
     public getActions() {
@@ -412,10 +572,12 @@ export class Node {
             // console.log(childState.toKey());
             // console.log(res);
             // console.log(childState.checkWin());
-            if (res === 1) { // simple move
-                children.push(new Node(childState, this, d));
-            } else if (res === 3) { // crate pushed not dead lock
-                children.push(new Node(childState, this, d));
+            if (res === 1) {
+                // simple move
+                children.push(new Node(childState, this, d, this.depth+1));
+            } else if (res === 3) {
+                // crate pushed not dead lock
+                children.push(new Node(childState, this, d, this.depth+1));
             }
         }
         return children;
@@ -430,8 +592,8 @@ export class State {
     public player: [number, number] = [0, 0];
     // state
     public deadlocks: boolean[][] = [];
-    private targets: [number,number][] = [];
-    private crates: [number,number][] = [];
+    private targets: [number, number][] = [];
+    private crates: [number, number][] = [];
 
     constructor(width: number, height: number) {
         this.width = width;
@@ -466,17 +628,24 @@ export class State {
                 }
             }
         }
+        let errorMessage: string[] = [];
         // check grid valid
-        if (playerCnt !== 1) { return false; }
-        if (this.crates.length !== this.targets.length) { return false; }
+        if (playerCnt !== 1) {
+            errorMessage.push("invalid player count");
+        }
+        if (this.crates.length !== this.targets.length) {
+            errorMessage.push("crate and target not match");
+        }
         this.initDeadlocks();
-        for (let pos of this.crates) { // init crate at deadlock
+        for (let pos of this.crates) {
+            // init crate at deadlock
             if (this.deadlocks[pos[0]][pos[1]]) {
-                return false;
+                errorMessage.push("crate at deadlock");
+                break
             }
         }
         //console.log(this.deadlocks);
-        return true;
+        return errorMessage;
     }
 
     public copyBitGrid(
@@ -513,54 +682,60 @@ export class State {
     }
 
     public getCopy() {
-        return new State(this.width, this.height)
-                .copyBitGrid(this.bitGrid, this.player, this.deadlocks);
+        return new State(this.width, this.height).copyBitGrid(
+            this.bitGrid,
+            this.player,
+            this.deadlocks
+        );
     }
 
     public initDeadlocks() {
         let solidMask = 1 << TILES.SOLID;
         let targetSolidMask = (1 << TILES.SOLID) | (1 << TILES.TARGET);
         let bitGridExtended: number[][] = [];
-        for (let i = 0; i <= this.height+1; i++) {
+        for (let i = 0; i <= this.height + 1; i++) {
             bitGridExtended[i] = [];
         }
         for (let i = 0; i < this.height; i++) {
             this.deadlocks.push([]);
             this.deadlocks[i] = new Array(this.width).fill(false);
-            for (let j=0; j < this.width; j++){
-                bitGridExtended[i+1][j+1] = this.bitGrid[i][j];
+            for (let j = 0; j < this.width; j++) {
+                bitGridExtended[i + 1][j + 1] = this.bitGrid[i][j];
             }
         }
-        for (let i = 0; i <= this.height+1; i++) {
+        for (let i = 0; i <= this.height + 1; i++) {
             bitGridExtended[i][0] = solidMask;
-            bitGridExtended[i][this.width+1] = solidMask;
+            bitGridExtended[i][this.width + 1] = solidMask;
         }
-        for (let j = 0; j <= this.width+1; j++) {
+        for (let j = 0; j <= this.width + 1; j++) {
             bitGridExtended[0][j] = solidMask;
-            bitGridExtended[this.height+1][j] = solidMask;
+            bitGridExtended[this.height + 1][j] = solidMask;
         }
         //console.log(bitGridExtended);
-        let corners: [number,number][] = [];
+        let corners: [number, number][] = [];
         for (let i = 1; i <= this.height; i++) {
             this.deadlocks[i] = [];
-            // if (self.solid[y-1][x] and self.solid[y][x-1]) 
+            // if (self.solid[y-1][x] and self.solid[y][x-1])
             // or (self.solid[y-1][x] and self.solid[y][x+1])
             // or (self.solid[y+1][x] and self.solid[y][x-1])
             // or (self.solid[y+1][x] and self.solid[y][x+1]):
-            for (let j = 1; j <= this.width; j++){
-                if (bitGridExtended[i][j] & targetSolidMask) { continue; }
-                if (((bitGridExtended[i-1][j] & solidMask)
-                        && (bitGridExtended[i][j-1] & solidMask))
-                  ||((bitGridExtended[i-1][j] & solidMask)
-                        && (bitGridExtended[i][j+1] & solidMask))
-                  ||((bitGridExtended[i+1][j] & solidMask)
-                        && (bitGridExtended[i][j-1] & solidMask))
-                  ||((bitGridExtended[i+1][j] & solidMask)
-                        && (bitGridExtended[i][j+1] & solidMask))) {
-                    corners.push([i,j]);
-                    this.deadlocks[i-1][j-1] = true;
+            for (let j = 1; j <= this.width; j++) {
+                if (bitGridExtended[i][j] & targetSolidMask) {
+                    continue;
                 }
-
+                if (
+                    (bitGridExtended[i - 1][j] & solidMask &&
+                        bitGridExtended[i][j - 1] & solidMask) ||
+                    (bitGridExtended[i - 1][j] & solidMask &&
+                        bitGridExtended[i][j + 1] & solidMask) ||
+                    (bitGridExtended[i + 1][j] & solidMask &&
+                        bitGridExtended[i][j - 1] & solidMask) ||
+                    (bitGridExtended[i + 1][j] & solidMask &&
+                        bitGridExtended[i][j + 1] & solidMask)
+                ) {
+                    corners.push([i, j]);
+                    this.deadlocks[i - 1][j - 1] = true;
+                }
             }
         }
         // console.log(corners);
@@ -572,34 +747,43 @@ export class State {
                 if ((dx === 0 && dy === 0) || (dx !== 0 && dy !== 0)) {
                     continue;
                 }
-                let walls: [number,number][] = [];
-                let x = c2[0], y = c2[1];
+                let walls: [number, number][] = [];
+                let x = c2[0],
+                    y = c2[1];
                 if (dx > 0) {
                     let step = dx / Math.abs(dx);
                     for (let i = x + step; i !== c1[0]; i += step) {
-                        if ((bitGridExtended[i][y] & targetSolidMask) ||
-                            !((bitGridExtended[i][y-1] & solidMask) ||
-                            (bitGridExtended[i][y+1] & solidMask))) {
+                        if (
+                            bitGridExtended[i][y] & targetSolidMask ||
+                            !(
+                                bitGridExtended[i][y - 1] & solidMask ||
+                                bitGridExtended[i][y + 1] & solidMask
+                            )
+                        ) {
                             walls = [];
                             break;
                         }
-                        walls.push([i,y]);
+                        walls.push([i, y]);
                     }
                 }
                 if (dy > 0) {
                     let step = dy / Math.abs(dy);
                     for (let i = y + step; i !== c1[1]; i += step) {
-                        if ((bitGridExtended[x][i] & targetSolidMask) ||
-                            !((bitGridExtended[x-1][i] & solidMask) ||
-                            (bitGridExtended[x+1][i] & solidMask))) {
+                        if (
+                            bitGridExtended[x][i] & targetSolidMask ||
+                            !(
+                                bitGridExtended[x - 1][i] & solidMask ||
+                                bitGridExtended[x + 1][i] & solidMask
+                            )
+                        ) {
                             walls = [];
                             break;
                         }
-                        walls.push([x,i]);
+                        walls.push([x, i]);
                     }
                 }
                 for (let w of walls) {
-                    this.deadlocks[w[0]-1][w[1]-1] = true;
+                    this.deadlocks[w[0] - 1][w[1] - 1] = true;
                 }
             }
         }
@@ -637,9 +821,14 @@ export class State {
 
     public getHuristic() {
         let totalDist = 0;
+        let nearPlayer = this.width + this.height + 1;
         for (let cpos of this.crates) {
+            if (this.bitGrid[cpos[0]][cpos[1]] & (1 << TILES.TARGET)) { continue; }
             let bestDist = this.width + this.height;
             let bestMatch = 0;
+            let pdist = Math.abs(this.player[0] - cpos[0])
+                      + Math.abs(this.player[1] - cpos[1]);
+            if (pdist < nearPlayer) { nearPlayer = pdist; }
             for (let i = 0; i < this.targets.length; i++) {
                 let tpos = this.targets[i];
                 let dist =
@@ -651,6 +840,10 @@ export class State {
             }
             totalDist += bestDist;
         }
+        // if (nearPlayer < this.width + this.height + 1) {
+        //     totalDist += Math.max(nearPlayer-1, 0);
+        // }
+        //console.log(nearPlayer);
         return totalDist;
     }
 
@@ -694,33 +887,13 @@ export class State {
     }
 }
 
-// class BFSAgent(Agent):
-//     def getSolution(self, state, maxIterations=-1):
-//         iterations = 0
-//         bestNode = None
-//         queue = [Node(state.clone(), None, None)]
-//         visisted = set()
-//         while (iterations < maxIterations or maxIterations <= 0) and len(queue) > 0:
-//             iterations += 1
-//             current = queue.pop(0)
-//             if current.checkWin():
-//                 return current.getActions(), current, iterations
-//             if current.getKey() not in visisted:
-//                 if bestNode == None or current.getHeuristic() < bestNode.getHeuristic():
-//                     bestNode = current
-//                 elif current.getHeuristic() == bestNode.getHeuristic() and current.getCost() < bestNode.getCost():
-//                     bestNode = current
-//                 visisted.add(current.getKey())
-//                 queue.extend(current.getChildren())
-//         return bestNode.getActions(), bestNode, iterations
-
 export class BFSAgent {
     public getSolution(state: State, maxIterations: number) {
         //console.log(state.toKey());
         let iterations = 0;
-        let bestNode: Node = new Node(state, null, -1);
+        let bestNode: Node = new Node(state, null, -1, 0);
         let bestHuristic = -1;
-        let queue: Node[] = [new Node(state, null, -1)];
+        let queue: Node[] = [bestNode];
         let visited = new Set<string>();
         while (
             queue.length > 0 &&
@@ -728,6 +901,54 @@ export class BFSAgent {
         ) {
             iterations += 1;
             let current: Node = queue.shift()!;
+            //console.log(current);
+            if (current.state.checkWin()) {
+                return {
+                    actions: current.getActions(),
+                    node: current,
+                    iterations: iterations,
+                };
+            }
+            if (!visited.has(current.state.toKey())) {
+                let h = current.huristic;
+                //console.log(h);
+                if (bestHuristic === -1 || h < bestHuristic) {
+                    bestNode = current;
+                    bestHuristic = h;
+                } else if (h === bestHuristic && current) {
+                    // best node not null
+                    bestNode = current;
+                    bestHuristic = h;
+                }
+            } else {
+                //console.log('visited');
+            }
+            visited.add(current.state.toKey());
+            queue = queue.concat(current.getChildren());
+        }
+        return {
+            actions: bestNode.getActions(),
+            node: bestNode,
+            iterations: iterations,
+        };
+    }
+}
+
+export class AStarAgent {
+    public getSolution(state: State, maxIterations: number) {
+        //console.log(state.toKey());
+        let iterations = 0;
+        let bestNode: Node = new Node(state, null, -1, 0);
+        let bestHuristic = -1;
+        let queue: PriorityQueue = new PriorityQueue();
+        queue.push(bestNode);
+        console.log(queue);
+        let visited = new Set<string>();
+        while ( queue.size() > 0 &&
+            (iterations < maxIterations|| maxIterations <= 0)
+        ) {
+            iterations += 1;
+            let current: Node = queue.pop()!;
             //console.log(current);
             if (current.state.checkWin()) {
                 return {
@@ -751,12 +972,71 @@ export class BFSAgent {
                 //console.log('visited');
             }
             visited.add(current.state.toKey());
-            queue = queue.concat(current.getChildren());
+            for (let c of current.getChildren()) {
+                queue.push(c);
+            }
+            //console.log(queue);
         }
         return {
             actions: bestNode.getActions(),
             node: bestNode,
             iterations: iterations,
         };
+    }
+}
+
+class PriorityQueue {
+    public heap: Node[] = [];
+    private top: number = 0;
+
+    constructor() {}
+    public size() { return this.heap.length; }
+    public isEmpty() { return this.heap.length === 0; }
+    public peek() {return this.heap[this.top]}
+    public push(node: Node) {
+        this.heap.push(node);
+        this.shiftUp();
+    }
+    public pop() {
+        const pop = this.peek();
+        let bottom = this.size() - 1;
+        if (bottom > this.top) {
+            this.swap(this.top, bottom);
+        }
+        this.heap.pop();
+        this.shiftDown();
+        return pop;
+    }
+
+    private parent = (i:number) => ((i + 1) >>> 1) - 1;
+    private left = (i:number) => (i << 1) + 1;
+    private right = (i:number) => (i + 1) << 1;
+    private swap(i:number,j:number) {
+        [this.heap[i], this.heap[j]] = [this.heap[j], this.heap[i]];
+    }
+    private greater(i:number,j:number) {
+        return this.heap[i].huristic < this.heap[j].huristic
+    }
+    private shiftUp() {
+        let n = this.size() - 1;
+        while (n > this.top && this.greater(n, this.parent(n))) {
+            this.swap(n, this.parent(n));
+            n = this.parent(n);
+        }
+    }
+    private shiftDown() {
+        let n = this.top;
+        let l = this.left(n);
+        let r = this.right(n);
+        while(
+            (l < this.size() && this.greater(l,n)) ||
+            (r < this.size() && this.greater(r,n))
+        ) {
+            let maxChild = (r < this.size() && this.greater(r,l)) ? r : l;
+            this.swap(n, maxChild);
+            n = maxChild;
+            l = this.left(n);
+            r = this.right(n);
+        }
     }
 }
