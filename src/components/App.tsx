@@ -53,12 +53,6 @@ export class App extends React.Component<AppProps, AppState> {
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
-
-        // Attaches services to window object for debugging.
-        (window as any).__PCGRL = {
-            tf: this.tfService,
-            gs: this.gameService,
-        };
     }
 
     public componentDidMount() {

@@ -1,6 +1,6 @@
 {
-    "short_name": "PCGRL Editor",
-    "name": "PCGRL Level Editor",
+    "short_name": "RL Brush",
+    "name": "RL Brush",
     "icons": [
         {
             "src": "favicon.ico",
