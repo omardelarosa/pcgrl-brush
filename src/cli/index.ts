@@ -6,6 +6,9 @@ import * as glob from "glob";
 import { GameService, Games, SolverSokoban } from "../services/Game";
 import _ from "lodash";
 import { GeneratedMapResults } from "../services/Game/index";
+import { TensorFlowService } from "../services/TensorFlow";
+import { QueryService } from "../services/Query/index";
+import { Checkpoint } from "../constants";
 
 /**
  * NOTE:  This file should not be imported or loaded in any client-side code!
@@ -32,6 +35,11 @@ const options: Record<string, yargs.Options> = {
         alias: "solve",
         type: "boolean",
         description: "Solver of map or maps.",
+    },
+    view: {
+        alias: "v",
+        type: "boolean",
+        description: "View a map from json data.",
     },
     mapJson: {
         alias: "m",
@@ -77,6 +85,7 @@ interface CLIArgs {
     [x: string]: unknown;
     // Custom types
     mapJson: string;
+    view: boolean;
     solve: boolean;
     genMap: boolean;
     steps: number;
@@ -93,10 +102,12 @@ const argv = yargs.options(options).argv as CLIArgs;
 
 export class CLI {
     constructor(args: CLIArgs) {
-        if (args.mapJson || args.solve) {
+        if (args.solve) {
             this.solveMapFromJSON(args);
         } else if (args.genMap) {
             this.generateJSONMap(args);
+        } else if (args.view) {
+            this.viewMap(args);
         }
     }
 
@@ -194,7 +205,24 @@ export class CLI {
         });
     }
 
-    public solveMaps(args: CLIArgs) {}
+    public viewMap(args: CLIArgs) {
+        if (args.mapJson) {
+            const f = args.mapJson;
+            const jsonString: Buffer = fs.readFileSync(f);
+            let map = JSON.parse(jsonString.toString());
+            const size = [map.length, map[0].length];
+            const checkpoint: Checkpoint = {
+                gridText: TensorFlowService.gridToText(map),
+                gridSize: size,
+                radius: 1,
+                steps: 1,
+            };
+            const h = QueryService.encode(checkpoint);
+            console.log(`\n\nmap_url: http://localhost:3000/#${h}`);
+        } else {
+            console.warn("no map provided via --mapJson flag.");
+        }
+    }
 }
 
 new CLI(argv);

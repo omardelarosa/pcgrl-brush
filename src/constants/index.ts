@@ -12,6 +12,12 @@ export interface IModelResult {
     repName: any;
     pendingSuggestions: ISuggestion[];
 }
+export interface Checkpoint {
+    gridText: string;
+    gridSize: number[];
+    radius: number;
+    steps: number;
+}
 
 export const NUMBER_OF_SUGGESTIONS_IN_WIDE = 25;
 

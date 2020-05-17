@@ -14,7 +14,7 @@ import {
     REPRESENTATION_NAMES_DICT,
     ISuggestion,
 } from "../services/TensorFlow";
-import { AppStateService, AppState, Checkpoint } from "../services/AppState";
+import { AppStateService, AppState } from "../services/AppState";
 import { Tileset } from "./Tileset";
 import { TilesetButtonProps } from "./TilesetButton";
 import { TILES, CENTER_TILE_POS } from "../constants/tiles";
@@ -31,6 +31,7 @@ import {
     DEFAULT_TOOL_RADIUS,
     DEFAULT_STAGE_GRID_SIZE,
     DEFAULT_PLAYER_POS,
+    Checkpoint,
 } from "../constants";
 import { REPRESENTATION_NAMES } from "../services/TensorFlow";
 import { Footer } from "./Footer";
