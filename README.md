@@ -2,7 +2,7 @@
 
 <img src="docs/full_ui_example3_rl_brush.png" width=640/>
 
-[https://pcgrl-editor.netlify.com/](https://pcgrl-editor.netlify.com/)
+[https://rlbrush.app/](https://rlbrush.app/)
 
 ## Setup
 
