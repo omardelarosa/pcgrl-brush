@@ -5,8 +5,6 @@ import {
     MULTITILE_PLAYER_TARGET,
 } from "../../constants/tiles";
 import { ACTIONS, EMPTY_SUGGESTED_GRIDS } from "../../constants";
-import { abs } from "numjs";
-import { timingSafeEqual } from "crypto";
 import {
     DEFAULT_STAGE_GRID_SIZE,
     DEFAULT_PLAYER_POS,
@@ -456,8 +454,6 @@ export class GameService {
         const tfService = new TensorFlowService();
         const gs = new GameService(Games.SOKOBAN);
 
-        let counter = 1;
-
         const looper = async () => {
             let results: GeneratedMapResults = {
                 grids: [],
@@ -635,7 +631,7 @@ export class State {
             // init crate at deadlock
             if (this.deadlocks[pos[0]][pos[1]]) {
                 errorMessage.push("crate at deadlock");
-                break
+                break;
             }
         }
         //console.log(this.deadlocks);
@@ -817,13 +813,11 @@ export class State {
         let totalDist = 0;
         for (let cpos of this.crates) {
             let bestDist = this.width + this.height;
-            let bestMatch = 0;
             for (let i = 0; i < this.targets.length; i++) {
                 let tpos = this.targets[i];
                 let dist =
                     Math.abs(cpos[0] - tpos[0]) + Math.abs(cpos[1] - tpos[1]);
                 if (bestDist > dist) {
-                    bestMatch = i;
                     bestDist = dist;
                 }
             }
