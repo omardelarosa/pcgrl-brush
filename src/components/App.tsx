@@ -39,6 +39,7 @@ import { KEY_MAPPINGS } from "../constants";
 import { Saving } from "./Saving";
 import { GameService, Games } from "../services/Game";
 import { GameActionViewer } from "./GameActionViewer";
+import { AnalyticsService } from "../services/Analytics";
 
 interface AppProps {
     queryState?: Checkpoint | null;
@@ -47,12 +48,17 @@ interface AppProps {
 export class App extends React.Component<AppProps, AppState> {
     private tfService: TensorFlowService;
     private gameService: GameService;
+    private analytics: AnalyticsService;
 
     constructor(props: AppProps) {
         super(props);
         this.state = AppStateService.createAppInitialState();
         this.tfService = new TensorFlowService();
         this.gameService = new GameService(Games.SOKOBAN);
+        this.analytics = new AnalyticsService();
+
+        // Create a global for debugging
+        (window as any).__PCGRL = this;
     }
 
     public componentDidMount() {
@@ -136,18 +142,23 @@ export class App extends React.Component<AppProps, AppState> {
                     KEY_MAPPINGS.codes_to_actions[ev.code as ValidKeysType];
                 switch (action) {
                     case ACTIONS.MOVE_DOWN:
+                        this.analytics.SEND_GA_ACTION_MOVE(action);
                         this.movePlayer([0, 1], action);
                         break;
                     case ACTIONS.MOVE_UP:
+                        this.analytics.SEND_GA_ACTION_MOVE(action);
                         this.movePlayer([0, -1], action);
                         break;
                     case ACTIONS.MOVE_LEFT:
+                        this.analytics.SEND_GA_ACTION_MOVE(action);
                         this.movePlayer([-1, 0], action);
                         break;
                     case ACTIONS.MOVE_RIGHT:
+                        this.analytics.SEND_GA_ACTION_MOVE(action);
                         this.movePlayer([1, 0], action);
                         break;
                     case ACTIONS.RETRY:
+                        this.analytics.SEND_GA_ACTION_GAME_RETRY();
                         this.gameService.reset();
                         this.restoreCheckpoint(this.state.checkpointIndex);
                         break;
@@ -163,12 +174,16 @@ export class App extends React.Component<AppProps, AppState> {
      * @param action
      */
     public movePlayer(direction: number[], action: ACTIONS) {
+        // this.analytics.sendEvent();
         const nextGrid = this.gameService.movePlayer(
             direction,
             this.state.grid,
             this.state.gridSize,
             action
         );
+        if (this.gameService.hasWon) {
+            this.analytics.SEND_GA_ACTION_GAME_WIN();
+        }
         if (nextGrid) {
             this.setState({ grid: nextGrid });
         }
@@ -209,6 +224,8 @@ export class App extends React.Component<AppProps, AppState> {
         }
         // console.log("saveMode: ", saveMode);
 
+        this.analytics.SEND_GA_ACTION_SIDEBAR_CLICK(p.buttonName);
+
         this.setState({
             selectedSidebarButtonName: p.buttonName,
             playMode,
@@ -236,6 +253,7 @@ export class App extends React.Component<AppProps, AppState> {
         ex: React.MouseEvent,
         p: TilesetButtonProps
     ) => {
+        this.analytics.SEND_GA_ACTION_TILESET_BUTTON_CLICK(p.buttonValue);
         this.setState({
             selectedTilesetButtonName: p.buttonValue,
         });
@@ -260,6 +278,7 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public onCellClick = (row: number, col: number, data: number) => {
+        this.analytics.SEND_GA_ACTION_CELL_CLICK(row, col, this.state.gridSize);
         this.activateCell(row, col, data);
     };
 
@@ -320,6 +339,12 @@ export class App extends React.Component<AppProps, AppState> {
         if (JSON.stringify(a) === JSON.stringify(b)) {
             return;
         }
+
+        // If a new checkpoint is added...
+        this.analytics.SEND_GA_BOARD_CHECKPOINT_CREATED(
+            checkpoint.gridText,
+            checkpoints.length - 1
+        );
 
         this.setState({
             checkpoints,
@@ -409,7 +434,7 @@ export class App extends React.Component<AppProps, AppState> {
 
     public clearStage() {
         const nextGrid = this.gameService.clearGrid(this.state.gridSize);
-
+        // this.analytics.
         // add checkpoint
         this.addCheckpoint(this.state.grid);
         this.setState(
@@ -474,6 +499,9 @@ export class App extends React.Component<AppProps, AppState> {
             return;
         }
 
+        // Send analytics event
+        this.analytics.SEND_GA_ACTION_ACCEPT_GHOST_SUGGESTION(repName);
+
         console.log("Accepting Ghost suggestion from: ", repName);
         const key: RepresentationName = repName;
         const suggestedGrid = this.state.suggestedGrids[key!];
@@ -508,12 +536,13 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public handleUndoRedo = (direction: number) => {
-        // console.log("direction: ", direction);
+        this.analytics.SEND_GA_UNDO_REDO(direction);
         this.restoreCheckpoint(this.state.checkpointIndex + direction);
     };
 
     public updateToolRadius = (step: number, radius: number): void => {
         if (radius !== this.state.toolRadius) {
+            this.analytics.SEND_GA_UPDATE_TOOL_RADIUS(radius);
             this.setState(
                 {
                     toolRadius: radius,
@@ -530,6 +559,7 @@ export class App extends React.Component<AppProps, AppState> {
         }
 
         if (step !== this.state.numSteps) {
+            this.analytics.SEND_GA_UPDATE_NUM_STEPS(step);
             this.setState(
                 {
                     numSteps: step,
@@ -643,6 +673,7 @@ export class App extends React.Component<AppProps, AppState> {
     };
 
     public updateTileSet = (t: string) => {
+        this.analytics.SEND_GA_UPDATE_TILE_SET(t);
         this.setState({
             tileset: t,
         });
