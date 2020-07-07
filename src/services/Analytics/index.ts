@@ -21,6 +21,18 @@ export interface EventParams {
     value?: number;
 }
 
+// TODO: Replace the following with your app's Firebase project configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCwP_UINSPpxaO9XBFdcmjuZ_uqY1m5j64",
+    authDomain: "rlbrush-app.firebaseapp.com",
+    databaseURL: "https://rlbrush-app.firebaseio.com",
+    projectId: "rlbrush-app",
+    storageBucket: "rlbrush-app.appspot.com",
+    messagingSenderId: "86638473548",
+    appId: "1:86638473548:web:7f084cb74887c4b29b1fe9",
+    measurementId: "G-0KXQX3SNJR",
+};
+
 const GA_EVENT_CATEGORIES = {
     GAME: "GAME",
     EDITOR: "EDITOR",
@@ -78,11 +90,25 @@ const GA_EVENT_LABELS = {
 
 export class AnalyticsService {
     private ga?: GoogleAnalytics;
+    private firebase?: any;
+    private USE_FIREBASE = true;
+    private USE_GA = true;
     public debug_mode = false;
     constructor() {
         this.getGoogleAnalyticsWrapper();
     }
 
+    private getFirebase() {
+        if (this.firebase) {
+            return this.firebase;
+        } else {
+            // Initialize Firebase
+            this.firebase = (window as any).firebase;
+            this.firebase.initializeApp(firebaseConfig);
+            this.firebase.analytics();
+            return this.firebase;
+        }
+    }
     private getGoogleAnalyticsWrapper(): GoogleAnalytics | undefined {
         if (this.ga) {
             return this.ga;
@@ -99,18 +125,31 @@ export class AnalyticsService {
             console.log("sending_analytics_event: ", params);
         }
         const _ga = this.getGoogleAnalyticsWrapper();
+        const _fb = this.getFirebase();
+        if (this.USE_GA) {
+            if (_ga) {
+                _ga(
+                    "send",
+                    "event",
+                    params.category,
+                    params.action,
+                    params.label,
+                    params.value
+                );
+            } else {
+                console.warn("failed_to_send_ga_event: ", params);
+            }
+        }
 
-        if (_ga) {
-            _ga(
-                "send",
-                "event",
-                params.category,
-                params.action,
-                params.label,
-                params.value
-            );
-        } else {
-            console.warn("failed_to_send_ga_event: ", params);
+        if (this.USE_FIREBASE) {
+            if (_fb) {
+                _fb.analytics().logEvent(
+                    `${params.category}:${params.action}`,
+                    params
+                );
+            } else {
+                console.warn("failed_to_send_firebase_event: ", params);
+            }
         }
     }
 
