@@ -73,6 +73,12 @@ export class AppStateService {
                     iconName: IconNames.SAVE,
                     className: "sidebar",
                 },
+                {
+                    buttonName: SidebarButtonNames.FEEDBACK,
+                    iconName: IconNames.FEEDBACK,
+                    className: "sidebar",
+                    href: "https://forms.gle/bcQohxmKfX7nTcFh6",
+                },
                 // Add additional buttons here and they will appear in the UI...
             ],
             toolbarButtons: [

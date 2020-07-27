@@ -4,11 +4,15 @@
 
 [https://rlbrush.app/](https://rlbrush.app/)
 
+## Usage
+
+For full instructions on how to use RLBrush, checkout the [Instructions document](/instructions.md)
+
 ## Setup
 
 ```bash
-npm install
-npm start
+yarn install
+yarn start
 ```
 
 Once this is running, the dev server can be accessed via browser at:
