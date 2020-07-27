@@ -7,8 +7,8 @@
 ## Setup
 
 ```bash
-npm install
-npm start
+yarn install
+yarn start
 ```
 
 Once this is running, the dev server can be accessed via browser at:

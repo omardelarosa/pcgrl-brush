@@ -13,6 +13,7 @@ export enum SidebarButtonNames {
     ERASE = "ERASE",
     PLAY = "PLAY",
     SAVE = "SAVE",
+    FEEDBACK = "FEEDBACK",
 }
 
 export interface ButtonProps {
@@ -23,6 +24,7 @@ export interface ButtonProps {
     buttonText?: string;
     buttonValue?: string;
     className?: string;
+    href?: string;
 }
 
 export function Button(props: ButtonProps) {
@@ -32,6 +34,23 @@ export function Button(props: ButtonProps) {
         selected = false,
         buttonText = DEFAULT_BUTTON_TEXT,
     } = props;
+    if (props.href) {
+        return (
+            <a href={props.href} target="_blank" rel="noopener noreferrer">
+                <button
+                    className={`button${
+                        props.className ? " " + props.className : ""
+                    }`}
+                >
+                    {iconName ? (
+                        <IconWrapper iconName={iconName} />
+                    ) : (
+                        <span className="button__text">{buttonText} </span>
+                    )}
+                </button>
+            </a>
+        );
+    }
     return (
         <button
             onClick={(ev) => (onClick ? onClick(ev, props) : null)}

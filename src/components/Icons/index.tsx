@@ -8,6 +8,7 @@ import { ReactComponent as IconPaintFormat } from "../../assets/icons/013-paint-
 import { ReactComponent as IconBin } from "../../assets/icons/173-bin.svg";
 import { ReactComponent as IconPlay } from "../../assets/icons/278-play2.svg";
 import { ReactComponent as IconSave } from "../../assets/icons/099-floppy-disk.svg";
+import { ReactComponent as IconFeedback } from "../../assets/icons/027-bullhorn.svg";
 
 const ICON_HEIGHT = 32;
 const ICON_WIDTH = 32;
@@ -21,6 +22,7 @@ export enum IconNames {
     BIN = "bin",
     PLAY = "play",
     SAVE = "save",
+    FEEDBACK = "feedback",
 }
 
 interface IconProps {
@@ -52,6 +54,8 @@ export function IconWrapper(props: IconProps) {
             return <IconPlay {...iconProps} />;
         case IconNames.SAVE:
             return <IconSave {...iconProps} />;
+        case IconNames.FEEDBACK:
+            return <IconFeedback {...iconProps} />;
         default:
             // This is basically an unsupported icon
             return <div>{`UNSUPPORTED ICON: ${props.iconName}`}</div>;
