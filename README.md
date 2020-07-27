@@ -6,7 +6,7 @@
 
 ## Usage
 
-For full instructions on how to use RLBrush, checkout the [Instructions document](/instructions.md)
+For full instructions on how to use RLBrush, checkout the [Instructions document](/Instructions.md)
 
 ## Setup
 
