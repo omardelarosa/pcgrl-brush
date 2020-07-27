@@ -4,6 +4,10 @@
 
 [https://rlbrush.app/](https://rlbrush.app/)
 
+## Usage
+
+For full instructions on how to use RLBrush, checkout the [Instructions document](/instructions.md)
+
 ## Setup
 
 ```bash
