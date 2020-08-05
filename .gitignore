@@ -27,3 +27,5 @@ yarn-debug.log*
 yarn-error.log*
 
 data/generated_maps/
+notebooks/__pycache__/
+notebooks/.ipynbd_checkpoints/

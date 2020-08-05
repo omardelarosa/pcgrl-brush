@@ -1,0 +1,17 @@
+# ----------------------------------------,,,
+# Events,,,
+# ----------------------------------------,,,
+Event Name,Count,Users,Mark as conversion
+BOARD:CHECKPOINT,795,75,FALSE
+EDITOR:ACCEPT_GHOST_SUGGESTION,308,32,FALSE
+EDITOR:BUTTON_PRESS,3165,76,FALSE
+first_visit,77,77,FALSE
+GAME:GAME_STATUS,182,11,FALSE
+GAME:MOVE,1706,15,FALSE
+page_view,143,77,FALSE
+session_start,97,77,FALSE
+,,,
+,,,
+Total User Sessions,75,,
+Total Interaction Events,3165,,
+Accepted,,,
